@@ -36,8 +36,18 @@ const C = {
   muted:"#7B6883", ok:"#6ECB73", ng:"#E87070",
   gold:"#F0C850", bdr:"#3A2840",
 };
-const CAT_L = { c:"基本 Core", a:"上級 Advanced", t:"厳しい場面 Tough" };
-const CAT_C = { c:"#6A9FD8", a:"#D4A054", t:"#D85A6A" };
+const CAT_L = {
+  c:"基本 Core", a:"上級 Advanced", t:"厳しい場面 Tough",
+  cr:"キャリア開発", pr:"称賛・承認", wb:"ウェルビーイング",
+  ng:"交渉・折衝", fn:"数字・財務", lg:"契約・法務",
+  em:"ビジネスメール", bg:"オフィス基本",
+};
+const CAT_C = {
+  c:"#6A9FD8", a:"#D4A054", t:"#D85A6A",
+  cr:"#4FB0A5", pr:"#E07AA8", wb:"#7FBF8F",
+  ng:"#E08840", fn:"#3FA9C9", lg:"#9A86D8",
+  em:"#8595C9", bg:"#B6C24F",
+};
 const baseBtn = { border:"none", borderRadius:12, cursor:"pointer", fontFamily:"'Noto Sans JP',sans-serif", transition:"all 0.2s" };
 
 // ═══════════════════ VOCAB DATA ═══════════════════
@@ -228,7 +238,264 @@ I owe you an apology|謝らないといけない|I owe you an apology for the de
 I take full responsibility|全責任を取る|I take full responsibility for the oversight.|t
 I should have|〜すべきだった|I should have communicated this sooner.|t
 my oversight|私の見落とし|That was my oversight.|t
-I misjudged|判断を誤った|I misjudged the timeline.|t`.trim().split('\n').map(l => {
+I misjudged|判断を誤った|I misjudged the timeline.|t
+growth trajectory|成長の軌道|Your growth trajectory this year has been impressive.|cr
+aspiration|目指す姿・志|Tell me about your long-term aspirations.|cr
+what's blocking you|何が妨げになっている?|What's blocking you from getting there?|cr
+where do you see yourself|どうなっていたいか|Where do you see yourself in three years?|cr
+skill gap|スキルの不足|Let's identify the skill gap we need to close.|cr
+stretch yourself|背伸びして挑戦する|This role will let you stretch yourself.|cr
+potential|潜在能力|I see a lot of potential in you.|cr
+develop|伸ばす・育てる|How would you like to develop this quarter?|cr
+mentor|指導役・助言する|I'd be happy to mentor you on this.|cr
+long-term vision|長期的な展望|What's your long-term vision for your career?|cr
+next step|次の一歩|What feels like the right next step for you?|cr
+career path|キャリアの道筋|Let's map out your career path together.|cr
+take initiative|自ら動く|I'd love to see you take more initiative.|cr
+play to your strengths|強みを活かす|This project lets you play to your strengths.|cr
+area for growth|伸びしろ|Public speaking is one area for growth.|cr
+ownership|当事者意識|I want you to take ownership of this domain.|cr
+comfort zone|居心地のいい範囲|Real growth happens outside your comfort zone.|cr
+step up|一段上を担う|You're ready to step up into a lead role.|cr
+broaden your scope|担当の幅を広げる|Let's broaden your scope beyond design.|cr
+visibility|社内での認知|This will give you more visibility with leadership.|cr
+sponsor|後ろ盾になる人|Every strong career needs a sponsor, not just a mentor.|cr
+feedback loop|フィードバックの仕組み|Let's set up a tighter feedback loop.|cr
+learning curve|習熟までの過程|The learning curve is steep, but you'll get there.|cr
+role model|手本となる人|You've become a role model for the juniors.|cr
+stretch goal|挑戦的な目標|Let's set one stretch goal for this half.|cr
+invest in yourself|自己投資する|Take the course — invest in yourself.|cr
+what excites you|何にワクワクする?|What part of the work excites you most?|cr
+carve out a path|道を切り開く|Let's carve out a path toward management.|cr
+unlock your potential|潜在力を引き出す|My job is to help unlock your potential.|cr
+own your development|成長を自分事にする|I want you to own your development plan.|cr
+growth mindset|成長志向|A growth mindset matters more than raw talent.|cr
+where you want to grow|伸ばしたい方向|Tell me where you want to grow next.|cr
+you nailed it|完璧だったよ|That presentation? You nailed it.|pr
+spot on|的確だ|Your analysis was spot on.|pr
+I'm proud of|誇りに思う|I'm proud of how you handled that client.|pr
+you've really grown|本当に成長した|You've really grown over the past year.|pr
+outstanding|傑出した|That was outstanding work.|pr
+recognize|功績を認める|I want to recognize your effort here.|pr
+shout-out|公の称賛|A big shout-out to Mei for closing the deal.|pr
+above and beyond|期待以上に|You went above and beyond on this one.|pr
+well-deserved|当然の評価|This promotion is well-deserved.|pr
+keep it up|その調子で|Great momentum — keep it up.|pr
+credit where it's due|正当に評価する|Credit where it's due — this was all you.|pr
+you crushed it|大成功だった|You crushed it this quarter.|pr
+impressive|見事だ|That's an impressive turnaround.|pr
+hats off to|脱帽だ|Hats off to the whole team.|pr
+exceeded expectations|期待を超えた|You exceeded expectations on delivery.|pr
+top-notch|一流の|The quality was top-notch.|pr
+give you credit|評価する|I have to give you credit for staying calm.|pr
+stellar|素晴らしい|That was a stellar effort.|pr
+you should be proud|誇っていい|You should be proud of this result.|pr
+couldn't have done it without you|あなたなしでは無理だった|We couldn't have done it without you.|pr
+you set the standard|基準を作った|You've set the standard for the team.|pr
+real difference|大きな違い|You made a real difference here.|pr
+way to go|よくやった|Way to go on hitting the target.|pr
+take a bow|誇っていい|Take a bow — you earned it.|pr
+exceptional|並外れた|Your judgment has been exceptional.|pr
+couldn't be happier|これ以上ない喜び|I couldn't be happier with your progress.|pr
+you've come a long way|よくここまで来た|You've come a long way since you joined.|pr
+standout|際立った存在|You were the standout this quarter.|pr
+give yourself credit|自分を認めて|Don't undersell it — give yourself credit.|pr
+raise a glass|乾杯しよう|Let's raise a glass to the launch.|pr
+proud of the team|チームを誇りに思う|I'm genuinely proud of the team.|pr
+you earned it|努力の成果だ|This win? You earned it.|pr
+burnout|燃え尽き|I want to catch burnout before it happens.|wb
+sustainable pace|持続可能なペース|Let's find a sustainable pace for you.|wb
+boundaries|境界線・線引き|It's healthy to set boundaries around work.|wb
+overwhelmed|手一杯で参っている|Tell me if you're feeling overwhelmed.|wb
+it's okay to|〜してもいい|It's okay to say no to extra work.|wb
+safe space|安心できる場|This is a safe space — be honest with me.|wb
+how are you holding up|調子はどう?|Honestly, how are you holding up?|wb
+take a break|休憩を取る|You've earned it — take a break.|wb
+mental health|心の健康|Your mental health comes first.|wb
+recharge|英気を養う|Use the long weekend to recharge.|wb
+no judgment|批判しない|Say whatever you need — no judgment.|wb
+speak freely|遠慮なく話す|Please speak freely in here.|wb
+running on empty|気力が尽きている|You sound like you're running on empty.|wb
+work-life balance|仕事と生活の両立|How's your work-life balance lately?|wb
+lighten your load|負担を減らす|Let's lighten your load this week.|wb
+check in on you|様子を気にかける|I just wanted to check in on you.|wb
+take care of yourself|自分を大事にして|Please take care of yourself this week.|wb
+step away|一旦離れる|It's fine to step away when you need to.|wb
+you're not alone|一人じゃない|Whatever it is, you're not alone in this.|wb
+unplug|仕事から離れる|Try to unplug over the holidays.|wb
+at your own pace|自分のペースで|Ramp back up at your own pace.|wb
+honest with yourself|自分に正直に|Be honest with yourself about capacity.|wb
+drained|消耗している|You look a little drained lately.|wb
+permission to rest|休む許可|Consider this permission to rest.|wb
+protect your time|自分の時間を守る|Let's protect your focus time.|wb
+how's your energy|調子・元気はどう|How's your energy been this week?|wb
+no pressure|無理しないで|No pressure — only if you're up for it.|wb
+mutual benefit|相互利益|Let's frame this as mutual benefit.|ng
+counter-offer|対案・逆提案|We're ready to make a counter-offer.|ng
+walk away|交渉を打ち切る|We're prepared to walk away if needed.|ng
+sweeten the deal|条件を良くする|Can we sweeten the deal with faster delivery?|ng
+terms|契約条件|Let's revisit the terms before signing.|ng
+leverage|交渉上の強み|Our track record gives us leverage here.|ng
+long-term relationship|長期的な関係|We value the long-term relationship over this quarter.|ng
+win-win|双方に利益|I'm confident we can make this win-win.|ng
+deal-breaker|決裂の決め手|Exclusivity is a deal-breaker for us.|ng
+bring to the table|提供できるもの|Here's what we bring to the table.|ng
+negotiate|交渉する|We're open to negotiate on volume.|ng
+proposal|提案|I'll send over a formal proposal tomorrow.|ng
+close a deal|契約をまとめる|Let's close this deal by month-end.|ng
+common ground|共通の土台|I think we can find common ground on price.|ng
+middle ground|妥協点|Let's meet at a middle ground.|ng
+meet halfway|歩み寄る|We're willing to meet you halfway.|ng
+bottom line|譲れない最低条件|Our bottom line is a 20% margin.|ng
+value proposition|提供価値|Let me reiterate our value proposition.|ng
+price point|価格帯|That price point works for our budget.|ng
+concession|譲歩|We can offer one concession on timing.|ng
+fine print|細かい条件|Let's go through the fine print together.|ng
+on the table|提示されている|The renewal offer is still on the table.|ng
+red line|絶対に譲れない一線|Data ownership is our red line.|ng
+give and take|譲り合い|Good partnerships need some give and take.|ng
+align incentives|利害を一致させる|Let's align incentives on retention.|ng
+price increase|値上げ|We're proposing a modest price increase.|ng
+justify the cost|費用を正当化する|Let me show how we justify the cost.|ng
+lock in a rate|価格を固定する|Sign now to lock in this rate.|ng
+exclusive partnership|独占的提携|We'd like to explore an exclusive partnership.|ng
+renegotiate|再交渉する|We may need to renegotiate next year.|ng
+firm on|譲らない|We're firm on the delivery date.|ng
+open to|前向きに検討する|We're open to a phased rollout.|ng
+rough estimate|おおよその見積もり|Send us a rough estimate by Friday.|ng
+add value|価値を加える|How can we add value beyond price?|ng
+strategic partner|戦略的パートナー|We see you as a strategic partner.|ng
+seal the deal|契約を確定する|A pilot project could seal the deal.|ng
+non-starter|論外・話にならない|A 50% discount is a non-starter.|ng
+revenue|売上高|Q2 revenue came in above plan.|fn
+margin|利益率|We need to protect our margin.|fn
+year-over-year|前年同期比|Revenue is up 30% year-over-year.|fn
+forecast|予測・見通し|Let's update the forecast for the second half.|fn
+break even|損益分岐|We expect to break even by March.|fn
+cash flow|資金繰り|Cash flow is tight this quarter.|fn
+profitable|黒字の|The new line is already profitable.|fn
+budget|予算|We're slightly over budget.|fn
+overhead|間接費・固定費|We cut overhead by 15% this year.|fn
+gross profit|売上総利益|Gross profit improved on better sourcing.|fn
+net profit|純利益|Net profit margin hit 12%.|fn
+cost structure|コスト構造|Our cost structure is mostly fixed.|fn
+variance|差異|There's a big variance against budget.|fn
+projection|予測値|These projections assume flat churn.|fn
+top line|売上(トップライン)|We're focused on top line growth.|fn
+burn rate|資金燃焼率|Our burn rate is under control.|fn
+EBITDA|利払い前利益|EBITDA margin is the key metric here.|fn
+CAC|顧客獲得コスト|Our CAC has come down nicely.|fn
+LTV|顧客生涯価値|The LTV to CAC ratio is now four to one.|fn
+churn|解約率|Churn ticked up last month.|fn
+recurring revenue|継続収益|Recurring revenue gives us stability.|fn
+quarter-over-quarter|前四半期比|Bookings grew quarter-over-quarter.|fn
+P&L|損益計算書|Let's walk through the P&L.|fn
+balance sheet|貸借対照表|The balance sheet looks healthy.|fn
+headcount|人員数|We're holding headcount flat for now.|fn
+run rate|年換算ペース|We're at a 10M annual run rate.|fn
+unit economics|単位あたり採算|The unit economics finally work.|fn
+operating costs|営業費用|Operating costs rose with the new hires.|fn
+capital|資本・元手|We're raising capital next year.|fn
+liquidity|手元資金の余裕|We have enough liquidity for 18 months.|fn
+write off|損失計上する|We had to write off that bad debt.|fn
+in the black|黒字で|We're finally in the black.|fn
+in the red|赤字で|That division is still in the red.|fn
+cost overrun|予算超過|Watch for cost overruns on this project.|fn
+return on investment|投資収益率|What's the expected return on investment?|fn
+binding|拘束力のある|This agreement is legally binding.|lg
+clause|条項|Let's review the termination clause.|lg
+terminate|解約する|Either party may terminate with notice.|lg
+renewal|更新|The contract is up for renewal in June.|lg
+liability|法的責任|We need to cap our liability.|lg
+indemnify|補償する|Each party agrees to indemnify the other.|lg
+in good faith|誠実に|We'll negotiate in good faith.|lg
+breach|契約違反|Late delivery would be a breach.|lg
+confidential|機密の|These figures are strictly confidential.|lg
+amendment|変更・修正条項|We'll add an amendment for the new scope.|lg
+party|契約当事者|Each party signs two copies.|lg
+obligations|義務|Let's clarify both sides' obligations.|lg
+effective date|発効日|The effective date is the first of May.|lg
+scope of work|業務範囲|The scope of work is attached as Exhibit A.|lg
+NDA|秘密保持契約|Let's get the NDA signed first.|lg
+governing law|準拠法|The governing law is Japanese law.|lg
+notice period|通知期間|There's a 30-day notice period.|lg
+auto-renew|自動更新|The contract will auto-renew unless cancelled.|lg
+SLA|サービス品質保証|The SLA guarantees 99.9% uptime.|lg
+force majeure|不可抗力|Force majeure covers natural disasters.|lg
+terms and conditions|利用規約|Please review the terms and conditions.|lg
+counterparty|取引相手|We're waiting on the counterparty's signature.|lg
+waive|権利を放棄する|We won't waive the confidentiality clause.|lg
+execute the contract|契約を締結する|We'll execute the contract this week.|lg
+statement of work|作業範囲記述書|The statement of work defines deliverables.|lg
+jurisdiction|管轄|Disputes fall under Tokyo jurisdiction.|lg
+entitled to|権利がある|You're entitled to 30 days' notice.|lg
+as per our discussion|お話しした通り|As per our discussion, I've attached the draft.|em
+following up on|〜の件で再度|I'm following up on my previous email.|em
+at your earliest convenience|ご都合のつき次第|Please reply at your earliest convenience.|em
+please find attached|添付の通り|Please find attached the revised proposal.|em
+I'd appreciate your input|ご意見を頂きたい|I'd appreciate your input on this.|em
+for your reference|ご参考までに|For your reference, here's the timeline.|em
+kindly|恐れ入りますが|Kindly confirm by end of day.|em
+regarding|〜の件について|I'm writing regarding the May invoice.|em
+looking forward to|楽しみにしている|Looking forward to your reply.|em
+please be advised|ご承知おきください|Please be advised the office is closed Monday.|em
+should you have any questions|ご不明点があれば|Should you have any questions, let me know.|em
+I wanted to reach out|ご連絡しました|I wanted to reach out about a partnership.|em
+thank you in advance|よろしくお願いします|Thank you in advance for your help.|em
+apologies for the delay|返信が遅れ失礼しました|Apologies for the delay in responding.|em
+please don't hesitate|遠慮なく|Please don't hesitate to reach out.|em
+as discussed|ご相談の通り|As discussed, I'll send the contract today.|em
+at this time|現時点では|We're unable to proceed at this time.|em
+I hope this email finds you well|お元気でしょうか|I hope this email finds you well.|em
+please let me know|お知らせください|Please let me know your availability.|em
+best regards|敬具|Best regards, and thanks again.|em
+circling back via email|メールで再度|Circling back on the points from our call.|em
+to confirm receipt|受領確認のため|Just to confirm receipt of your documents.|em
+Could you|〜していただけますか|Could you send me the file?|bg
+Would you mind|〜してもらえますか|Would you mind sharing your screen?|bg
+Just to confirm|確認ですが|Just to confirm, the meeting is at three?|bg
+I see your point|言いたいことは分かる|I see your point, but let's double-check.|bg
+I'm not sure about that|それはどうかな|I'm not sure about that approach.|bg
+You're breaking up|音声が途切れている|Sorry, you're breaking up a little.|bg
+Could you repeat that|もう一度お願いします|Could you repeat that, please?|bg
+Makes sense|なるほど|That makes sense to me.|bg
+Got it|了解|Got it, I'll take care of it.|bg
+Sure thing|もちろん|Sure thing, I'll send it now.|bg
+No worries|問題ないよ|No worries, take your time.|bg
+How's it going|調子どう?|Hey, how's it going?|bg
+Can you hear me|聞こえますか|Can you hear me okay?|bg
+Let me share my screen|画面を共有します|Let me share my screen real quick.|bg
+You go first|お先にどうぞ|Go ahead, you first.|bg
+Sorry, go ahead|すみません、どうぞ|Sorry, go ahead — you were saying?|bg
+Let me get back to you|追って連絡します|Let me get back to you on that.|bg
+I'll loop back|また連絡する|I'll loop back once I know more.|bg
+Sounds like a plan|いい計画だね|Sounds like a plan.|bg
+Fair enough|まあそうだね|Fair enough, let's try it.|bg
+Hang on a second|ちょっと待って|Hang on a second, let me check.|bg
+Bear with me|少々お待ちを|Bear with me while I pull it up.|bg
+Where were we|どこまで話したっけ|So, where were we?|bg
+Quick question|ちょっと質問|Quick question before we wrap.|bg
+Out of office|不在|I'll be out of office on Friday.|bg
+On mute|ミュートになっている|I think you're on mute.|bg
+Let me check my calendar|予定を確認します|Let me check my calendar and confirm.|bg
+Does that work for you|それで大丈夫?|Does that work for you?|bg
+Whenever works|いつでも大丈夫|Whenever works for you is fine.|bg
+I'll keep it short|手短にします|I'll keep it short.|bg
+Talk soon|また近いうちに|Great chat — talk soon.|bg
+Catch you later|また後で|Catch you later.|bg
+Appreciate it|ありがとう助かる|Thanks, appreciate it.|bg
+My bad|ごめん私のミス|My bad, I sent the wrong file.|bg
+Let me think about it|考えさせて|Let me think about it and reply.|bg
+Take your time|ゆっくりどうぞ|No rush, take your time.|bg
+Same here|こちらも同じ|Same here, sounds good.|bg
+Good to know|知れてよかった|Good to know, thanks for the heads up.|bg
+I'm with you|同意するよ|I'm with you on that.|bg
+Let me know either way|どちらでも連絡して|Let me know either way by tomorrow.|bg
+Up to you|お任せします|It's totally up to you.|bg
+Can we reschedule|予定変更できますか|Can we reschedule to next week?|bg
+Real quick|手短に一つ|Real quick — did you see my message?|bg
+Nice to meet you|はじめまして|Nice to meet you — I've heard great things.|bg
+How can I help|何かお手伝いできる?|Hi, how can I help?|bg`.trim().split('\n').map(l => {
   const p = l.split('|');
   return { w:p[0], m:p[1], e:p[2], c:p[3] };
 });
@@ -247,6 +514,12 @@ const SCENARIOS = [
   { id:10, cat:"t", t:"対立の仲裁", s:"二人のメンバーが衝突している。間に入り、共通点を探り、わだかまりを解消したい。", words:["mediate","find common ground","clear the air"] },
   { id:11, cat:"a", t:"戦略の方向転換", s:"今の施策は本質的な変化を生んでいない。トレードオフを認識した上で方向転換を提案する。", words:["pivot","move the needle","trade-off"] },
   { id:12, cat:"a", t:"オンボーディング計画", s:"新メンバーを受け入れる。早く戦力化できるよう、立ち上がりと状況把握の計画を伝える。", words:["onboard","ramp up","get up to speed"] },
+  { id:13, cat:"cr", t:"キャリアの1on1", s:"優秀なメンバーと半期の1on1。長期的にどうなりたいかを引き出し、次の一歩と伸ばすべき領域を一緒に描く。", words:["where do you see yourself","next step","area for growth"] },
+  { id:14, cat:"pr", t:"成果を称える", s:"四半期で大きな成果を上げたメンバーを正当に評価し、励ます。具体的に何が良かったかを伝える。", words:["you nailed it","above and beyond","well-deserved"] },
+  { id:15, cat:"wb", t:"体調と燃え尽きへの配慮", s:"最近忙しそうなメンバーを気遣う1on1。安心して話せる場を作り、持続可能なペースを一緒に考える。", words:["how are you holding up","sustainable pace","safe space"] },
+  { id:16, cat:"ng", t:"クライアントとの値上げ交渉", s:"長期クライアントに値上げを提案する。相互利益と長期的な関係を強調し、双方が得をする形に着地させたい。", words:["price increase","mutual benefit","win-win"] },
+  { id:17, cat:"fn", t:"四半期の業績報告", s:"経営会議で四半期の数字を報告する。売上・利益率・前年比に触れ、今後の見通しを共有する。", words:["revenue","margin","year-over-year"] },
+  { id:18, cat:"lg", t:"契約更新の連絡", s:"パートナーに契約更新を打診する。発効日や更新条項に触れ、誠実に進めたい旨を伝える。", words:["renewal","effective date","in good faith"] },
 ];
 
 // ═══════════════════ UTILS ═══════════════════
@@ -705,7 +978,7 @@ function StatsView({ vocab, mastery, daily, calendar, onReset }) {
   const learning=vocab.filter(v=>{const m=mastery[v.w]||0;return m>0&&m<3;}).length;
   const newW=total-mastered-learning;
   const pct=Math.round((mastered/total)*100);
-  const cats=["c","a","t"];
+  const cats=["c","a","t","cr","pr","wb","ng","fn","lg","em","bg"];
   const d = daily || { solved:0, learned:0, mastered:0 };
   const cal = calendar || {};
   // Last 30 days (oldest → newest)
@@ -1163,13 +1436,18 @@ function App() {
       {/* Category Filter */}
       {(mode==="quiz"||mode==="type")&&(
         <div style={{padding:"10px 20px",display:"flex",gap:6,overflowX:"auto"}}>
-          {[{id:"all",l:"All"},{id:"c",l:"Core"},{id:"a",l:"Advanced"},{id:"t",l:"Tough"}].map(f=>(
+          {[{id:"all",l:"All"},{id:"c",l:"Core"},{id:"a",l:"Advanced"},{id:"t",l:"Tough"},
+            {id:"cr",l:"Career"},{id:"pr",l:"Praise"},{id:"wb",l:"Wellbeing"},{id:"ng",l:"Negotiation"},
+            {id:"fn",l:"Finance"},{id:"lg",l:"Legal"},{id:"em",l:"Email"},{id:"bg",l:"Basics"}].map(f=>{
+            const accent = f.id==="all" ? C.plum : (CAT_C[f.id] || C.plum);
+            const active = catFilter===f.id;
+            return (
             <button key={f.id} onClick={()=>setCatFilter(f.id)}
-              style={{...baseBtn,background:catFilter===f.id?C.plum:C.card,color:catFilter===f.id?C.cream:C.muted,
-                padding:"6px 14px",fontSize:12,whiteSpace:"nowrap",border:"1px solid "+(catFilter===f.id?C.plum:C.bdr)}}>
+              style={{...baseBtn,background:active?accent:C.card,color:active?"#fff":C.muted,
+                padding:"6px 14px",fontSize:12,whiteSpace:"nowrap",border:"1px solid "+(active?accent:C.bdr)}}>
               {f.l}
             </button>
-          ))}
+          );})}
         </div>
       )}
 
