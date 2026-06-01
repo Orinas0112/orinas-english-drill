@@ -5,15 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>ORINAS English Drill</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>📝</text></svg>">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Source+Serif+4:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #110A14; color: #F5F0F3; font-family: 'Source Serif 4', Georgia, serif; -webkit-font-smoothing: antialiased; }
+  body { background: #110A14; color: #F5F0F3; font-family: 'Noto Sans JP', sans-serif; -webkit-font-smoothing: antialiased; }
   ::selection { background: #8E5687; color: white; }
-  input, textarea { font-family: 'Source Serif 4', Georgia, serif; }
+  input, textarea { font-family: 'Noto Sans JP', sans-serif; }
   @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
   @keyframes pulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.05); } }
   @keyframes shake { 0%,100% { transform:translateX(0); } 25% { transform:translateX(-4px); } 75% { transform:translateX(4px); } }
@@ -37,7 +38,7 @@ const C = {
 };
 const CAT_L = { c:"基本 Core", a:"上級 Advanced", t:"厳しい場面 Tough" };
 const CAT_C = { c:"#6A9FD8", a:"#D4A054", t:"#D85A6A" };
-const baseBtn = { border:"none", borderRadius:12, cursor:"pointer", fontFamily:"'Source Serif 4',Georgia,serif", transition:"all 0.2s" };
+const baseBtn = { border:"none", borderRadius:12, cursor:"pointer", fontFamily:"'Noto Sans JP',sans-serif", transition:"all 0.2s" };
 
 // ═══════════════════ VOCAB DATA ═══════════════════
 const VOCAB = `align|認識を合わせる|Let's align on this before we lock it in.|c
@@ -292,6 +293,57 @@ function saveMastery(m) {
   try { localStorage.setItem('orinas-drill-v1', JSON.stringify(m)); } catch(e) {}
 }
 
+// ── Today's summary (date-stamped, resets on new day) ──
+const todayKey = () => {
+  const d = new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+};
+function loadDaily() {
+  const fresh = { date: todayKey(), solved: 0, learned: 0, mastered: 0 };
+  try {
+    const r = localStorage.getItem('orinas-daily-v1');
+    if (!r) return fresh;
+    const d = JSON.parse(r);
+    return d.date === todayKey() ? d : fresh;
+  } catch(e) { return fresh; }
+}
+function saveDaily(d) {
+  try { localStorage.setItem('orinas-daily-v1', JSON.stringify(d)); } catch(e) {}
+}
+
+// ── In-progress session (resume support) ──
+function loadSession(mode) {
+  try {
+    const r = localStorage.getItem('orinas-session-'+mode+'-v1');
+    if (!r) return null;
+    const s = JSON.parse(r);
+    if (!s || !Array.isArray(s.questions) || !Array.isArray(s.results)) return null;
+    if (s.questions.length === 0 || s.results.length >= s.questions.length) return null;
+    return s;
+  } catch(e) { return null; }
+}
+function saveSession(mode, s) {
+  try { localStorage.setItem('orinas-session-'+mode+'-v1', JSON.stringify(s)); } catch(e) {}
+}
+function clearSession(mode) {
+  try { localStorage.removeItem('orinas-session-'+mode+'-v1'); } catch(e) {}
+}
+
+// ═══════════════════ RESUME DIALOG ═══════════════════
+function ResumeDialog({ answered, total, onResume, onNew }) {
+  return (
+    <div className="fade-in" style={{padding:"32px 24px",textAlign:"center"}}>
+      <div style={{fontSize:48,marginBottom:16}}>⏸️</div>
+      <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:20,fontWeight:700,marginBottom:8}}>前回の続きがあります</div>
+      <div style={{color:C.muted,fontSize:14,marginBottom:28}}>{answered} / {total} 問まで進んでいます。<br/>続きから再開しますか？</div>
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        <button onClick={onResume} style={{...baseBtn,background:C.plum,color:C.cream,padding:"14px 0",fontSize:15,width:"100%"}}>続きから再開</button>
+        <button onClick={onNew} style={{...baseBtn,background:"transparent",border:"1px solid "+C.bdr,color:C.muted,padding:"12px 0",fontSize:14,width:"100%"}}>新しく始める</button>
+      </div>
+    </div>
+  );
+}
+
 // ═══════════════════ QUIZ MODE ═══════════════════
 function QuizMode({ vocab, mastery, onAnswer, catFilter }) {
   const [questions, setQuestions] = useState([]);
@@ -299,27 +351,44 @@ function QuizMode({ vocab, mastery, onAnswer, catFilter }) {
   const [selected, setSelected] = useState(null);
   const [results, setResults] = useState([]);
   const [done, setDone] = useState(false);
+  const [resume, setResume] = useState(null);
+  const firstRef = useRef(true);
 
-  const initQuiz = () => {
+  const initNew = () => {
     const sel = selectWords(vocab, mastery, 10, catFilter);
     const qs = sel.map(v => {
       const d = Math.random() > 0.5 ? "jp" : "en";
       const wrong = pickWrong(v, vocab);
       return { word:v, dir:d, choices:shuffle([v,...wrong]) };
     });
+    clearSession('quiz'); setResume(null);
     setQuestions(qs); setIdx(0); setSelected(null); setResults([]); setDone(false);
   };
-  useEffect(initQuiz, [catFilter]);
+  useEffect(() => {
+    if (firstRef.current) {
+      firstRef.current = false;
+      const saved = loadSession('quiz');
+      if (saved) { setResume(saved); return; }
+    }
+    initNew();
+  }, [catFilter]);
 
+  const doResume = () => {
+    const s = resume;
+    setQuestions(s.questions); setResults(s.results); setIdx(s.results.length);
+    setSelected(null); setDone(false); setResume(null);
+  };
+
+  if (resume) return <ResumeDialog answered={resume.results.length} total={resume.questions.length} onResume={doResume} onNew={initNew} />;
   if (questions.length === 0) return null;
   if (done) {
     const correct = results.filter(r=>r).length;
     return (
       <div className="fade-in" style={{padding:24,textAlign:"center"}}>
         <div style={{fontSize:64,marginBottom:16}}>{correct>=8?"🎉":correct>=5?"👍":"💪"}</div>
-        <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:32,fontWeight:700,marginBottom:8}}>{correct} / {results.length}</div>
+        <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:32,fontWeight:700,marginBottom:8}}>{correct} / {results.length}</div>
         <div style={{color:C.muted,marginBottom:32}}>{correct>=8?"Excellent!":correct>=5?"Good progress!":"Keep practicing!"}</div>
-        <button onClick={initQuiz} style={{...baseBtn,background:C.plum,color:C.cream,padding:"14px 32px",fontSize:16}}>Next Round →</button>
+        <button onClick={initNew} style={{...baseBtn,background:C.plum,color:C.cream,padding:"14px 32px",fontSize:16}}>Next Round →</button>
       </div>
     );
   }
@@ -335,7 +404,7 @@ function QuizMode({ vocab, mastery, onAnswer, catFilter }) {
       </div>
       <div style={{textAlign:"center",marginBottom:28}}>
         <div style={{color:C.muted,fontSize:13,marginBottom:6}}>{q.dir==="jp"?"この意味の英語は？":"この英語の意味は？"}</div>
-        <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:700,lineHeight:1.3}}>
+        <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:26,fontWeight:700,lineHeight:1.3}}>
           {q.dir==="jp"?q.word.m:q.word.w}
         </div>
       </div>
@@ -355,7 +424,9 @@ function QuizMode({ vocab, mastery, onAnswer, catFilter }) {
                 setSelected(ch.w);
                 const ok=ch.w===q.word.w;
                 onAnswer(q.word.w,ok);
-                setResults(prev=>[...prev,ok]);
+                const nr=[...results,ok];
+                setResults(nr);
+                saveSession('quiz',{questions,results:nr});
               }}
               style={{...baseBtn,background:bg,border:"1.5px solid "+bdr,padding:"14px 16px",fontSize:15,color:C.cream,textAlign:"left",width:"100%"}}>
               {q.dir==="jp"?ch.w:ch.m}
@@ -371,7 +442,7 @@ function QuizMode({ vocab, mastery, onAnswer, catFilter }) {
       )}
       {selected!==null&&(
         <div style={{textAlign:"center",marginTop:20}}>
-          <button onClick={()=>{if(idx<questions.length-1){setIdx(idx+1);setSelected(null);}else setDone(true);}}
+          <button onClick={()=>{if(idx<questions.length-1){setIdx(idx+1);setSelected(null);}else{clearSession('quiz');setDone(true);}}}
             style={{...baseBtn,background:C.plum,color:C.cream,padding:"12px 28px",fontSize:15}}>
             {idx<questions.length-1?"Next →":"Results →"}
           </button>
@@ -390,15 +461,32 @@ function TypeMode({ vocab, mastery, onAnswer, catFilter }) {
   const [hintLv, setHintLv] = useState(0);
   const [results, setResults] = useState([]);
   const [done, setDone] = useState(false);
+  const [resume, setResume] = useState(null);
   const inputRef = useRef(null);
+  const firstRef = useRef(true);
 
-  const initType = () => {
+  const initNew = () => {
     const sel = selectWords(vocab, mastery, 10, catFilter);
+    clearSession('type'); setResume(null);
     setQuestions(sel); setIdx(0); setInput(""); setChecked(null); setHintLv(0); setResults([]); setDone(false);
   };
-  useEffect(initType, [catFilter]);
-  useEffect(() => { if(inputRef.current&&checked===null) inputRef.current.focus(); }, [idx,checked]);
+  useEffect(() => {
+    if (firstRef.current) {
+      firstRef.current = false;
+      const saved = loadSession('type');
+      if (saved) { setResume(saved); return; }
+    }
+    initNew();
+  }, [catFilter]);
+  useEffect(() => { if(inputRef.current&&checked===null&&!resume) inputRef.current.focus(); }, [idx,checked,resume]);
 
+  const doResume = () => {
+    const s = resume;
+    setQuestions(s.questions); setResults(s.results); setIdx(s.results.length);
+    setInput(""); setChecked(null); setHintLv(0); setDone(false); setResume(null);
+  };
+
+  if (resume) return <ResumeDialog answered={resume.results.length} total={resume.questions.length} onResume={doResume} onNew={initNew} />;
   if(questions.length===0) return null;
   if(done){
     const correct=results.filter(r=>r).length;
@@ -406,7 +494,7 @@ function TypeMode({ vocab, mastery, onAnswer, catFilter }) {
     return (
       <div className="fade-in" style={{padding:24,textAlign:"center"}}>
         <div style={{fontSize:64,marginBottom:16}}>{correct>=8?"🎉":correct>=5?"👍":"💪"}</div>
-        <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:32,fontWeight:700,marginBottom:8}}>{correct}/{results.length}</div>
+        <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:32,fontWeight:700,marginBottom:8}}>{correct}/{results.length}</div>
         {missed.length>0&&(
           <div style={{marginTop:20,textAlign:"left"}}>
             <div style={{color:C.muted,fontSize:13,marginBottom:10}}>復習が必要な単語：</div>
@@ -418,7 +506,7 @@ function TypeMode({ vocab, mastery, onAnswer, catFilter }) {
             ))}
           </div>
         )}
-        <button onClick={initType} style={{...baseBtn,background:C.plum,color:C.cream,padding:"14px 32px",fontSize:16,marginTop:24}}>Next Round →</button>
+        <button onClick={initNew} style={{...baseBtn,background:C.plum,color:C.cream,padding:"14px 32px",fontSize:16,marginTop:24}}>Next Round →</button>
       </div>
     );
   }
@@ -430,7 +518,9 @@ function TypeMode({ vocab, mastery, onAnswer, catFilter }) {
     const ok = checkTyped(input, q.w);
     setChecked(ok);
     onAnswer(q.w, ok);
-    setResults(prev=>[...prev, ok]);
+    const nr=[...results, ok];
+    setResults(nr);
+    saveSession('type',{questions,results:nr});
   };
 
   return (
@@ -441,7 +531,7 @@ function TypeMode({ vocab, mastery, onAnswer, catFilter }) {
       </div>
       <div style={{textAlign:"center",marginBottom:24}}>
         <div style={{color:C.muted,fontSize:13,marginBottom:6}}>この意味の英語をタイプしてください</div>
-        <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:700,lineHeight:1.3}}>{q.m}</div>
+        <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:26,fontWeight:700,lineHeight:1.3}}>{q.m}</div>
       </div>
       {hintLv>0&&checked===null&&(
         <div className="fade-in" style={{textAlign:"center",marginBottom:12,color:C.gold,fontSize:14}}>
@@ -478,7 +568,7 @@ function TypeMode({ vocab, mastery, onAnswer, catFilter }) {
       )}
       {checked!==null&&(
         <div style={{textAlign:"center"}}>
-          <button onClick={()=>{if(idx<questions.length-1){setIdx(idx+1);setInput("");setChecked(null);setHintLv(0);}else setDone(true);}}
+          <button onClick={()=>{if(idx<questions.length-1){setIdx(idx+1);setInput("");setChecked(null);setHintLv(0);}else{clearSession('type');setDone(true);}}}
             style={{...baseBtn,background:C.plum,color:C.cream,padding:"12px 28px",fontSize:15}}>
             {idx<questions.length-1?"Next →":"Results →"}
           </button>
@@ -489,21 +579,40 @@ function TypeMode({ vocab, mastery, onAnswer, catFilter }) {
 }
 
 // ═══════════════════ STATS VIEW ═══════════════════
-function StatsView({ vocab, mastery, onReset }) {
+function StatsView({ vocab, mastery, daily, onReset }) {
   const total=vocab.length;
   const mastered=vocab.filter(v=>(mastery[v.w]||0)>=3).length;
   const learning=vocab.filter(v=>{const m=mastery[v.w]||0;return m>0&&m<3;}).length;
   const newW=total-mastered-learning;
   const pct=Math.round((mastered/total)*100);
   const cats=["c","a","t"];
+  const d = daily || { solved:0, learned:0, mastered:0 };
 
   const weak=vocab.filter(v=>{const m=mastery[v.w]||0;return m>0&&m<3;}).sort((a,b)=>(mastery[a.w]||0)-(mastery[b.w]||0)).slice(0,10);
 
   return (
     <div className="fade-in" style={{padding:"16px 20px"}}>
-      <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:700,marginBottom:20}}>Progress</div>
+      <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:22,fontWeight:700,marginBottom:20}}>Progress</div>
+
+      {/* Today's summary */}
+      <div style={{marginBottom:24}}>
+        <div style={{fontSize:13,color:C.muted,marginBottom:10}}>今日の学習サマリー</div>
+        <div style={{display:"flex",gap:8}}>
+          {[
+            {l:"解いた問題",v:d.solved,c:C.lav},
+            {l:"新しく学習",v:d.learned,c:C.gold},
+            {l:"習得した",v:d.mastered,c:C.ok},
+          ].map(s=>(
+            <div key={s.l} style={{flex:1,padding:"14px 8px",background:C.card,borderRadius:10,textAlign:"center"}}>
+              <div style={{fontSize:26,fontWeight:700,color:s.c}}>{s.v}</div>
+              <div style={{fontSize:11,color:C.muted,marginTop:2}}>{s.l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div style={{textAlign:"center",marginBottom:24}}>
-        <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:56,fontWeight:700,color:C.lav}}>{pct}%</div>
+        <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:56,fontWeight:700,color:C.lav}}>{pct}%</div>
         <div style={{color:C.muted,fontSize:14}}>習得率 ({mastered} / {total} words)</div>
       </div>
       <div style={{display:"flex",gap:8,marginBottom:24}}>
@@ -596,7 +705,7 @@ function ComposeMode() {
   if(!sc) {
     return (
       <div className="fade-in" style={{padding:"16px 20px"}}>
-        <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:700,marginBottom:6}}>Compose</div>
+        <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:22,fontWeight:700,marginBottom:6}}>Compose</div>
         <div style={{color:C.muted,fontSize:13,marginBottom:18,lineHeight:1.6}}>シナリオを1つ選び、指定の単語をすべて使って英作文しましょう。AIが添削します。</div>
         <div style={{display:"flex",flexDirection:"column",gap:10}}>
           {SCENARIOS.map(s=>(
@@ -693,20 +802,33 @@ function ComposeMode() {
 function App() {
   const [mode, setMode] = useState("quiz");
   const [mastery, setMastery] = useState(loadMastery);
+  const [daily, setDaily] = useState(loadDaily);
   const [catFilter, setCatFilter] = useState("all");
+  const masteryRef = useRef(mastery);
 
   const handleAnswer = useCallback((word, correct) => {
-    setMastery(prev => {
-      const cur = prev[word] || 0;
-      const next = correct ? Math.min(cur+1, 3) : Math.max(cur-1, 0);
-      const updated = { ...prev, [word]: next };
-      saveMastery(updated);
-      return updated;
+    const cur = masteryRef.current[word] || 0;
+    const next = correct ? Math.min(cur+1, 3) : Math.max(cur-1, 0);
+    const updated = { ...masteryRef.current, [word]: next };
+    masteryRef.current = updated;
+    setMastery(updated);
+    saveMastery(updated);
+    setDaily(prev => {
+      const base = prev.date === todayKey() ? prev : { date: todayKey(), solved:0, learned:0, mastered:0 };
+      const nd = {
+        ...base,
+        solved: base.solved + 1,
+        learned: base.learned + (cur === 0 && next > 0 ? 1 : 0),
+        mastered: base.mastered + (cur < 3 && next >= 3 ? 1 : 0),
+      };
+      saveDaily(nd);
+      return nd;
     });
   }, []);
 
   const handleReset = () => {
     if(confirm("進捗をすべてリセットしますか？")){
+      masteryRef.current = {};
       setMastery({});
       saveMastery({});
     }
@@ -718,18 +840,27 @@ function App() {
     {id:"compose",icon:"✏️",label:"Compose"},
     {id:"stats",icon:"📊",label:"Stats"},
   ];
+  const total = VOCAB.length;
   const masteredCount = VOCAB.filter(v=>(mastery[v.w]||0)>=3).length;
+  const learningCount = VOCAB.filter(v=>{const m=mastery[v.w]||0;return m>0&&m<3;}).length;
+  const masteredPct = masteredCount/total*100;
+  const learningPct = learningCount/total*100;
 
   return (
     <div style={{minHeight:"100vh",background:C.bg,color:C.cream,maxWidth:480,margin:"0 auto"}}>
       {/* Header */}
       <div style={{padding:"20px 20px 12px",borderBottom:"1px solid "+C.bdr}}>
-        <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:700,letterSpacing:1}}>ORINAS English Drill</div>
+        <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:22,fontWeight:700,letterSpacing:1}}>ORINAS English Drill</div>
         <div style={{display:"flex",alignItems:"center",gap:12,marginTop:8}}>
-          <div style={{flex:1,height:4,background:C.card,borderRadius:2,overflow:"hidden"}}>
-            <div style={{height:"100%",width:(masteredCount/VOCAB.length*100)+"%",background:"linear-gradient(90deg,"+C.dusty+","+C.lav+")",borderRadius:2,transition:"width 0.5s"}} />
+          <div style={{flex:1,height:6,background:C.muted,borderRadius:3,overflow:"hidden",display:"flex"}}>
+            <div style={{height:"100%",width:masteredPct+"%",background:C.ok,transition:"width 0.5s"}} />
+            <div style={{height:"100%",width:learningPct+"%",background:C.gold,transition:"width 0.5s"}} />
           </div>
-          <span style={{fontSize:12,color:C.muted}}>{masteredCount}/{VOCAB.length}</span>
+        </div>
+        <div style={{display:"flex",gap:14,marginTop:8,fontSize:12,color:C.muted}}>
+          <span><span style={{color:C.ok,fontWeight:700}}>習得済み {masteredCount}</span></span>
+          <span><span style={{color:C.gold,fontWeight:700}}>学習中 {learningCount}</span></span>
+          <span>全{total}語</span>
         </div>
       </div>
 
@@ -751,7 +882,7 @@ function App() {
         {mode==="quiz"&&<QuizMode vocab={VOCAB} mastery={mastery} onAnswer={handleAnswer} catFilter={catFilter} />}
         {mode==="type"&&<TypeMode vocab={VOCAB} mastery={mastery} onAnswer={handleAnswer} catFilter={catFilter} />}
         {mode==="compose"&&<ComposeMode />}
-        {mode==="stats"&&<StatsView vocab={VOCAB} mastery={mastery} onReset={handleReset} />}
+        {mode==="stats"&&<StatsView vocab={VOCAB} mastery={mastery} daily={daily} onReset={handleReset} />}
       </div>
 
       {/* Bottom Nav */}
