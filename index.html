@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ORINAS English Drill</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>📝</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Source+Serif+4:wght@400;500;600&display=swap" rel="stylesheet">
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #110A14; color: #F5F0F3; font-family: 'Source Serif 4', Georgia, serif; -webkit-font-smoothing: antialiased; }
+  ::selection { background: #8E5687; color: white; }
+  input, textarea { font-family: 'Source Serif 4', Georgia, serif; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes pulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.05); } }
+  @keyframes shake { 0%,100% { transform:translateX(0); } 25% { transform:translateX(-4px); } 75% { transform:translateX(4px); } }
+  .fade-in { animation: fadeIn 0.35s ease-out; }
+  .pulse { animation: pulse 0.3s ease-out; }
+  .shake { animation: shake 0.3s ease-out; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+
+// ═══════════════════ CONSTANTS ═══════════════════
+const C = {
+  bg:"#110A14", card:"#1E1222", cardH:"#2A1830",
+  plum:"#5C2E50", deep:"#2D0A4E", dusty:"#8E5687",
+  lav:"#C9A9C5", lilac:"#E8D5E4", cream:"#F5F0F3",
+  muted:"#7B6883", ok:"#6ECB73", ng:"#E87070",
+  gold:"#F0C850", bdr:"#3A2840",
+};
+const CAT_L = { c:"基本 Core", a:"上級 Advanced", t:"厳しい場面 Tough" };
+const CAT_C = { c:"#6A9FD8", a:"#D4A054", t:"#D85A6A" };
+const baseBtn = { border:"none", borderRadius:12, cursor:"pointer", fontFamily:"'Source Serif 4',Georgia,serif", transition:"all 0.2s" };
+
+// ═══════════════════ VOCAB DATA ═══════════════════
+const VOCAB = `align|認識を合わせる|Let's align on this before we lock it in.|c
+lock in|確定させる・固める|Once we align, let's lock in the plan.|c
+flag|指摘する・共有する|Thanks for flagging this — let me take a look.|c
+escalate|上位レベルに引き上げる|If the client pushes back, escalate it to me.|c
+loop in|巻き込む・CCに入れる|Let's loop Mori-san in on the contract side.|c
+step in|介入する・手を貸す|I'll step in if the team can't handle it.|c
+step back|一歩引く・手を離す|I'd like you to step back from project details.|c
+prioritize|優先する|Let's prioritize her health first.|c
+deprioritize|優先度を下げる|If there's no concrete case, let's deprioritize it.|c
+own|責任を持つ・主体的に担う|You own the brand work end-to-end.|c
+double-check|念のため再確認する|Can we double-check the margins one more time?|c
+sync|すり合わせる・同期する|Let's sync on the delivery timelines.|c
+circle back|後で戻ってくる|Let's circle back on this after BitSummit.|c
+follow up|フォローする|I'll follow up with Sophie and let you know.|c
+reassess|再評価する・見直す|Let's reassess once she's back from leave.|c
+revisit|もう一度検討する|Worth revisiting the discount structure.|c
+pivot|方向転換する|The team couldn't pivot to a conversion focus.|c
+de-escalate|事態を鎮静化させる|Mori-san can help de-escalate the situation.|c
+hand off|引き継ぐ・任せる|Let me know when you want to hand it off.|c
+roll out|展開する・本格導入する|We'll roll out the new values to the full team.|c
+surface|浮き彫りにする|People aren't surfacing their concerns directly.|c
+aligned|認識が合っている|I'm aligned on all three points.|c
+scalable|拡張可能な・回る仕組みの|Stepping in every time isn't scalable for you.|c
+transitional|暫定的な・移行期の|Let's mark what's transitional vs long-term.|c
+compelling|説得力のある・魅力的な|Is the discount compelling enough for clients?|c
+material|重大な・無視できない|The issue was still material.|c
+proactive|先回りの・主体的な|It came from wanting to be proactive.|c
+accountable|説明責任を負う|Who is accountable for revenue growth?|c
+viable|実現可能な・成り立つ|The pitch didn't feel viable.|c
+thoughtful|よく考えられた・配慮のある|Thanks for the thoughtful response.|c
+time-sensitive|急ぎの|Certain inquiries are time-sensitive.|c
+overdue|遅れている・期限切れの|This feedback is a bit overdue, sorry.|c
+on the same page|認識が一致している|Let's make sure we're on the same page.|c
+honestly|正直に言うと|Honestly, it's hard to renew someone with this record.|c
+ultimately|最終的には|Ultimately it was my responsibility.|c
+realistically|現実的に考えて|Can we realistically deliver on organic alone?|c
+structurally|構造的に・仕組み上|Structurally, the handover wasn't stabilized.|c
+going forward|今後は|Going forward, please follow the reporting lines.|c
+for now|今のところ・当面|Let's leave that project with her for now.|c
+that said|とはいえ|That said, she's on leave, so health comes first.|c
+in hindsight|振り返ってみると|In hindsight, the timing could've been gentler.|c
+across the board|一律に・全体的に|Are we ensuring 30% margin across the board?|c
+end-to-end|最初から最後まで|Could you oversee his outreach end-to-end?|c
+on my plate|抱えている仕事の量|I've had so much on my plate lately.|c
+in the weeds|細部に埋もれて|I don't want to be pulled into the weeds on this.|c
+in your corner|あなたの味方|Don't carry this alone — I'm in your corner.|c
+fill me in|状況を教えて|Can you fill me in on where things stand?|c
+heads up|事前のお知らせ|Just giving you a heads up before Monday.|c
+touch base|軽く連絡を取る|Let's touch base after your meeting with Brandon.|c
+float an idea|アイデアをそっと出す|Quick thought I wanted to float with you.|c
+take it offline|別途話す|Let's take this offline and discuss 1on1.|c
+slip through the cracks|見落とされる|Nothing should slip through the cracks.|c
+get up to speed|状況を把握して追いつく|Get up to speed before you arrive.|c
+hit the ground running|すぐ走り出す|So you can hit the ground running with a plan.|c
+keep in the loop|共有し続ける|Keep me in the loop as you go.|c
+the full picture|全体像|I want to see the full picture so I can support.|c
+bounce ideas off|壁打ちする・相談する|Someone to bounce ideas off is valuable.|c
+check in|様子を確認する|Just checking in to make sure we're aligned.|c
+frame it as|〜という形で伝える|Let's frame it as support, not a correction.|c
+buy-in|納得・賛同|I want genuine buy-in from the team.|c
+take a hard look at|厳しく見つめ直す|She needs to take a hard look at her output.|c
+set the direction|方向性を決める|Let me check the details, then set a direction.|c
+make the call|判断を下す|That's your call to make as the Director.|c
+it's your call|あなたが決めていい|Whether you or she leads — it's your call.|c
+bring it to me|相談・報告に来る|Bring anything to me anytime if it feels off.|c
+keep this between us|ここだけの話|Please keep this between us for now.|c
+kick off|始める|Let's kick off with a quick status update.|a
+walk through|順を追って説明する|Can you walk me through the numbers?|a
+drill down|深掘りする|Let's drill down into why conversion is flat.|a
+unpack|解きほぐす|Let me unpack these answers one by one.|a
+zoom out|俯瞰する・全体を見る|Let's zoom out and look at the bigger picture.|a
+table|いったん保留にする|Let's table this and come back next week.|a
+park|脇に置いておく|Let's park the pricing question for now.|a
+wrap up|締める・まとめる|Let's wrap up — anything else?|a
+recap|要点を振り返る|Quick recap of what we agreed today.|a
+delegate|権限委譲する・任せる|I want to delegate this fully to the PM.|a
+empower|権限と裁量を与える|I want to empower you to make that call.|a
+greenlight|ゴーサインを出す|I'll greenlight the partnership once we align.|a
+sign off on|承認する・決裁する|I'll sign off on the budget today.|a
+weigh in|意見を述べる・口を挟む|I'd like the ops team to weigh in here.|a
+chime in|会話に加わる|Feel free to chime in anytime.|a
+table-stakes|参入の最低条件|VTuber access is now table-stakes.|a
+trade-off|取捨選択|There's a trade-off between speed and quality.|a
+bottleneck|ボトルネック・律速|Approval is the bottleneck in this flow.|a
+low-hanging fruit|すぐ取れる成果|Let's start with the low-hanging fruit.|a
+move the needle|本質的な変化を起こす|Will this actually move the needle on revenue?|a
+capacity|キャパシティ・処理能力|We're at capacity until BitSummit wraps.|a
+runway|資金・時間の持ち時間|We have enough runway to test this approach.|a
+north star|判断の最上位指標|Profit per FTE is our north star metric.|a
+guardrails|逸脱を防ぐ枠組み|Let's set guardrails before we delegate this.|a
+scope creep|範囲が際限なく膨らむ|We need to watch for scope creep on this deal.|a
+sunk cost|回収不能な投資|Let's not fall for the sunk-cost fallacy.|a
+due diligence|精査・デューデリ|Let's do proper due diligence before the M&A.|a
+ballpark|おおよその数字|Can you give me a ballpark figure?|a
+benchmark|基準と比べる|Let's benchmark this against AnyMind.|a
+de-risk|リスクを下げる|Retention contracts de-risk the acquisition.|a
+future-proof|将来も通用させる|We need to future-proof the business model.|a
+on track|順調に進んでいる|Are we on track for the July launch?|a
+off track|遅れている・ずれている|The timeline is slipping a bit.|a
+on hold|保留中|The disciplinary process is on hold for now.|a
+in limbo|宙ぶらりんの状態|The contract is in limbo until she's back.|a
+up in the air|未確定で流動的|Her start date is still up in the air.|a
+in flux|流動的・変化の途中|The team structure is still in flux.|a
+stretched thin|手が回らないほど忙しい|The team is stretched thin right now.|a
+spread too thin|あれこれ手を広げすぎ|I worry we're spreading ourselves too thin.|a
+firefighting|目先の火消しに追われる|I keep firefighting instead of doing strategy.|a
+in good shape|良い状態にある|The global team is in good shape now.|a
+a moving target|変わり続ける目標|Pricing feels like a moving target.|a
+a stretch|少し背伸び・厳しめ|325M was always a stretch goal.|a
+watertight|隙のない・万全な|We need a watertight paper trail here.|a
+a paper trail|証拠となる記録|Make sure there's a clear paper trail.|a
+onboard|オンボードする・受け入れる|We'll onboard her over two weeks.|a
+ramp up|立ち上がる・戦力化する|Give her time to ramp up in the new role.|a
+stretch assignment|成長を促す挑戦的な任務|This could be a good stretch assignment.|a
+set expectations|期待値を明確にする|Let's set clear expectations upfront.|a
+raise the bar|基準を引き上げる|We're raising the bar on delivery quality.|a
+hold accountable|責任を持たせる|We need to hold the PM accountable.|a
+course-correct|軌道修正する|Let's course-correct before it gets worse.|a
+culture fit|社風との相性|We assess culture fit, not just numbers.|a
+punch above weight|実力以上の働きをする|She punches above her weight on design.|a
+go the extra mile|一歩踏み込んで頑張る|The team went the extra mile on this.|a
+drop the ball|しくじる・取りこぼす|I don't want anyone to drop the ball.|a
+a quick win|短期で出せる成果|Give the team a quick win to build morale.|a
+a blind spot|自分では気づけない盲点|Team dynamics can be a blind spot for me.|a
+wear many hats|何役もこなす|In a small team we all wear many hats.|a
+push back on|やんわり異論を唱える|I'd gently push back on that assumption.|a
+devil's advocate|あえて反対意見を言う|Let me play devil's advocate for a second.|a
+correct me if I'm wrong|間違っていたら教えて|Correct me if I'm wrong, but the deadline is Friday?|a
+help me understand|理解させてほしい|Help me understand how we got here.|a
+my two cents|私見ですが|Just my two cents, but I'd extend the contract.|a
+off the top of my head|パッと思いつく範囲で|Off the top of my head, three options come to mind.|a
+let's not lose sight of|見失わないようにしよう|Let's not lose sight of the bigger goal.|a
+I hear you, but|分かる、でも|I hear you, but we still need a formal response.|a
+to be fair|公平に見れば|To be fair, the brief was unclear from the start.|a
+that's a fair point|それは一理ある|That's a fair point — let me reconsider.|a
+sounds good|了解・いいね|Sounds good, let's go with that.|a
+works for me|それでOK|Friday works for me.|a
+noted|承知・把握しました|Noted — I'll handle it.|a
+will do|やっておきます|Will do, I'll send it by EOD.|a
+EOD|今日中 (End of Day)|I'll get it to you by EOD.|a
+ASAP|できるだけ早く|Let's move on this ASAP after the event.|a
+FYI|ご参考まで|FYI, the client replied this morning.|a
+keep me posted|随時知らせて|Keep me posted on how it goes.|a
+let's make it happen|実現させよう|Great — let's make it happen.|a
+on it|今やってます|I'm on it.|a
+good call|いい判断だね|Good call on pausing the process.|a
+take it from there|そこから進めよう|Let's see the reply and take it from there.|a
+underperforming|期待を下回っている|The team has been underperforming this quarter.|t
+falling short|期待に届いていない|We're falling short of the target.|t
+inconsistent|ムラがある・不安定な|Your output has been inconsistent lately.|t
+a pattern|繰り返されるパターン|I'm seeing a pattern of missed deadlines.|t
+concerning|懸念される|This trend is concerning.|t
+unacceptable|受け入れられない|Fabricating reports is unacceptable.|t
+not meeting the bar|基準に達していない|Right now, this isn't meeting the bar.|t
+improvement plan|改善計画|Let's put together an improvement plan.|t
+concrete steps|具体的な手順|I need to see concrete steps by Friday.|t
+non-negotiable|譲れない・交渉不可|Honest reporting is non-negotiable.|t
+close the gap|ギャップを埋める|What do you need to close the gap?|t
+a clear timeline|明確なスケジュール|Let's set a clear timeline for this.|t
+address|問題に取り組む|We need to address this before it escalates.|t
+follow through|最後までやり切る|I need you to follow through on what we agreed.|t
+overstep|越権する・踏み越える|I feel like we overstepped on this one.|t
+cross a line|一線を越える|Lying to a client crosses a line.|t
+out of scope|範囲外|That decision was out of scope for your role.|t
+draw a line|線を引く|I need to draw a line here.|t
+pushback|反発・抵抗|I expect some pushback, but we'll handle it.|t
+misalignment|認識のずれ|There's a misalignment between the teams.|t
+breach of trust|信頼の毀損|This was a breach of trust.|t
+non-renewal|契約非更新|We've decided on non-renewal of the contract.|t
+let go|解雇する（婉曲）|We had to let her go.|t
+part ways|別の道を行く（婉曲）|We've decided to part ways.|t
+transition out|退社に向けて移行する|Let's plan a smooth transition out.|t
+wind down|段階的に終了する|We'll wind down the project over two weeks.|t
+not working out|うまくいっていない|I have to be honest — this isn't working out.|t
+severance|退職手当・解雇手当|We'll offer severance as part of the package.|t
+mutual agreement|双方合意|It was a mutual agreement.|t
+mediate|仲裁する|I'd like to mediate this conversation.|t
+find common ground|共通点を見つける|Let's find common ground first.|t
+hear both sides|両方の言い分を聞く|I want to hear both sides before deciding.|t
+clear the air|わだかまりを解消する|Let's clear the air and move forward.|t
+depersonalize|個人攻撃をやめる|Let's depersonalize this and focus on the work.|t
+resolve|解決する|We need to resolve this before it affects the team.|t
+that's on me|それは私の責任|That's on me — I should have caught it earlier.|t
+I owe you an apology|謝らないといけない|I owe you an apology for the delay.|t
+I take full responsibility|全責任を取る|I take full responsibility for the oversight.|t
+I should have|〜すべきだった|I should have communicated this sooner.|t
+my oversight|私の見落とし|That was my oversight.|t
+I misjudged|判断を誤った|I misjudged the timeline.|t`.trim().split('\n').map(l => {
+  const p = l.split('|');
+  return { w:p[0], m:p[1], e:p[2], c:p[3] };
+});
+
+// ═══════════════════ UTILS ═══════════════════
+const shuffle = a => { const b=[...a]; for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];} return b; };
+const norm = s => s.toLowerCase().replace(/[^a-z0-9 ]/g,"").replace(/\s+/g," ").trim();
+
+function pickWrong(correct, pool, n) {
+  n = n || 3;
+  return shuffle(pool.filter(v => v.w !== correct.w)).slice(0, n);
+}
+
+function checkTyped(input, word) {
+  const i = norm(input);
+  const core = norm(word.replace(/\(.*?\)/g,"").trim());
+  if (!i) return false;
+  if (i === core) return true;
+  const words = core.split(" ");
+  if (words.length > 1 && words.every(w => i.includes(w))) return true;
+  if (core.length > 3 && (i.includes(core) || core.includes(i))) return true;
+  const a=i, b=core;
+  const m = [];
+  for (let x=0;x<=a.length;x++) { m[x]=[]; for(let y=0;y<=b.length;y++) m[x][y]=x||y; }
+  for(let x=1;x<=a.length;x++) for(let y=1;y<=b.length;y++)
+    m[x][y]=Math.min(m[x-1][y]+1,m[x][y-1]+1,m[x-1][y-1]+(a[x-1]!==b[y-1]?1:0));
+  return m[a.length][b.length] <= Math.max(1, Math.floor(core.length * 0.25));
+}
+
+function selectWords(vocab, mastery, count, catFilter) {
+  count = count || 10;
+  catFilter = catFilter || "all";
+  let pool = catFilter === "all" ? vocab.slice() : vocab.filter(v => v.c === catFilter);
+  if (pool.length === 0) pool = vocab.slice();
+  const scored = pool.map(v => ({ ...v, score: mastery[v.w] || 0 }));
+  scored.sort((a,b) => a.score - b.score || Math.random() - 0.5);
+  return scored.slice(0, Math.min(count, scored.length));
+}
+
+// ═══════════════════ STORAGE (localStorage) ═══════════════════
+function loadMastery() {
+  try { const r = localStorage.getItem('orinas-drill-v1'); return r ? JSON.parse(r) : {}; }
+  catch(e) { return {}; }
+}
+function saveMastery(m) {
+  try { localStorage.setItem('orinas-drill-v1', JSON.stringify(m)); } catch(e) {}
+}
+
+// ═══════════════════ QUIZ MODE ═══════════════════
+function QuizMode({ vocab, mastery, onAnswer, catFilter }) {
+  const [questions, setQuestions] = useState([]);
+  const [idx, setIdx] = useState(0);
+  const [selected, setSelected] = useState(null);
+  const [results, setResults] = useState([]);
+  const [done, setDone] = useState(false);
+
+  const initQuiz = () => {
+    const sel = selectWords(vocab, mastery, 10, catFilter);
+    const qs = sel.map(v => {
+      const d = Math.random() > 0.5 ? "jp" : "en";
+      const wrong = pickWrong(v, vocab);
+      return { word:v, dir:d, choices:shuffle([v,...wrong]) };
+    });
+    setQuestions(qs); setIdx(0); setSelected(null); setResults([]); setDone(false);
+  };
+  useEffect(initQuiz, [catFilter]);
+
+  if (questions.length === 0) return null;
+  if (done) {
+    const correct = results.filter(r=>r).length;
+    return (
+      <div className="fade-in" style={{padding:24,textAlign:"center"}}>
+        <div style={{fontSize:64,marginBottom:16}}>{correct>=8?"🎉":correct>=5?"👍":"💪"}</div>
+        <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:32,fontWeight:700,marginBottom:8}}>{correct} / {results.length}</div>
+        <div style={{color:C.muted,marginBottom:32}}>{correct>=8?"Excellent!":correct>=5?"Good progress!":"Keep practicing!"}</div>
+        <button onClick={initQuiz} style={{...baseBtn,background:C.plum,color:C.cream,padding:"14px 32px",fontSize:16}}>Next Round →</button>
+      </div>
+    );
+  }
+
+  const q = questions[idx];
+  const isCorrect = selected !== null ? selected === q.word.w : null;
+
+  return (
+    <div className="fade-in" style={{padding:"16px 20px"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+        <span style={{color:C.muted,fontSize:14}}>{idx+1} / {questions.length}</span>
+        <span style={{background:CAT_C[q.word.c],color:"white",padding:"3px 10px",borderRadius:20,fontSize:12}}>{CAT_L[q.word.c]}</span>
+      </div>
+      <div style={{textAlign:"center",marginBottom:28}}>
+        <div style={{color:C.muted,fontSize:13,marginBottom:6}}>{q.dir==="jp"?"この意味の英語は？":"この英語の意味は？"}</div>
+        <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:700,lineHeight:1.3}}>
+          {q.dir==="jp"?q.word.m:q.word.w}
+        </div>
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        {q.choices.map(ch => {
+          const isThis = selected===ch.w;
+          const isRight = ch.w===q.word.w;
+          let bg=C.card, bdr=C.bdr;
+          if(selected!==null){
+            if(isRight){bg="rgba(110,203,115,0.15)";bdr=C.ok;}
+            else if(isThis){bg="rgba(232,112,112,0.15)";bdr=C.ng;}
+          }
+          return (
+            <button key={ch.w} disabled={selected!==null}
+              className={selected!==null&&isThis?(isCorrect?"pulse":"shake"):""}
+              onClick={()=>{
+                setSelected(ch.w);
+                const ok=ch.w===q.word.w;
+                onAnswer(q.word.w,ok);
+                setResults(prev=>[...prev,ok]);
+              }}
+              style={{...baseBtn,background:bg,border:"1.5px solid "+bdr,padding:"14px 16px",fontSize:15,color:C.cream,textAlign:"left",width:"100%"}}>
+              {q.dir==="jp"?ch.w:ch.m}
+            </button>
+          );
+        })}
+      </div>
+      {selected!==null&&(
+        <div className="fade-in" style={{marginTop:20,padding:16,background:C.card,borderRadius:12,borderLeft:"3px solid "+(isCorrect?C.ok:C.ng)}}>
+          <div style={{fontSize:13,color:C.muted,marginBottom:4}}>例文</div>
+          <div style={{fontSize:14,fontStyle:"italic",lineHeight:1.5}}>{q.word.e}</div>
+        </div>
+      )}
+      {selected!==null&&(
+        <div style={{textAlign:"center",marginTop:20}}>
+          <button onClick={()=>{if(idx<questions.length-1){setIdx(idx+1);setSelected(null);}else setDone(true);}}
+            style={{...baseBtn,background:C.plum,color:C.cream,padding:"12px 28px",fontSize:15}}>
+            {idx<questions.length-1?"Next →":"Results →"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════ TYPE MODE ═══════════════════
+function TypeMode({ vocab, mastery, onAnswer, catFilter }) {
+  const [questions, setQuestions] = useState([]);
+  const [idx, setIdx] = useState(0);
+  const [input, setInput] = useState("");
+  const [checked, setChecked] = useState(null);
+  const [hintLv, setHintLv] = useState(0);
+  const [results, setResults] = useState([]);
+  const [done, setDone] = useState(false);
+  const inputRef = useRef(null);
+
+  const initType = () => {
+    const sel = selectWords(vocab, mastery, 10, catFilter);
+    setQuestions(sel); setIdx(0); setInput(""); setChecked(null); setHintLv(0); setResults([]); setDone(false);
+  };
+  useEffect(initType, [catFilter]);
+  useEffect(() => { if(inputRef.current&&checked===null) inputRef.current.focus(); }, [idx,checked]);
+
+  if(questions.length===0) return null;
+  if(done){
+    const correct=results.filter(r=>r).length;
+    const missed=questions.filter((_,i)=>!results[i]);
+    return (
+      <div className="fade-in" style={{padding:24,textAlign:"center"}}>
+        <div style={{fontSize:64,marginBottom:16}}>{correct>=8?"🎉":correct>=5?"👍":"💪"}</div>
+        <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:32,fontWeight:700,marginBottom:8}}>{correct}/{results.length}</div>
+        {missed.length>0&&(
+          <div style={{marginTop:20,textAlign:"left"}}>
+            <div style={{color:C.muted,fontSize:13,marginBottom:10}}>復習が必要な単語：</div>
+            {missed.map(v=>(
+              <div key={v.w} style={{padding:"8px 12px",background:C.card,borderRadius:8,marginBottom:6,fontSize:14}}>
+                <span style={{color:C.lav,fontWeight:600}}>{v.w}</span>
+                <span style={{color:C.muted}}> — {v.m}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <button onClick={initType} style={{...baseBtn,background:C.plum,color:C.cream,padding:"14px 32px",fontSize:16,marginTop:24}}>Next Round →</button>
+      </div>
+    );
+  }
+
+  const q = questions[idx];
+  const hint = q.w.slice(0, Math.min(hintLv+1, q.w.length));
+
+  const doCheck = () => {
+    const ok = checkTyped(input, q.w);
+    setChecked(ok);
+    onAnswer(q.w, ok);
+    setResults(prev=>[...prev, ok]);
+  };
+
+  return (
+    <div className="fade-in" style={{padding:"16px 20px"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+        <span style={{color:C.muted,fontSize:14}}>{idx+1}/{questions.length}</span>
+        <span style={{background:CAT_C[q.c],color:"white",padding:"3px 10px",borderRadius:20,fontSize:12}}>{CAT_L[q.c]}</span>
+      </div>
+      <div style={{textAlign:"center",marginBottom:24}}>
+        <div style={{color:C.muted,fontSize:13,marginBottom:6}}>この意味の英語をタイプしてください</div>
+        <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:26,fontWeight:700,lineHeight:1.3}}>{q.m}</div>
+      </div>
+      {hintLv>0&&checked===null&&(
+        <div className="fade-in" style={{textAlign:"center",marginBottom:12,color:C.gold,fontSize:14}}>
+          ヒント: {hint}{"_".repeat(Math.max(0,q.w.length-hint.length))}
+        </div>
+      )}
+      <div style={{display:"flex",gap:8,marginBottom:12}}>
+        <input ref={inputRef} value={input} onChange={e=>setInput(e.target.value)} disabled={checked!==null}
+          onKeyDown={e=>{if(e.key==="Enter"&&input.trim())doCheck();}}
+          placeholder="Type the English word..."
+          style={{flex:1,padding:"14px 16px",borderRadius:12,border:"1.5px solid "+(checked===null?C.bdr:checked?C.ok:C.ng),
+            background:C.card,color:C.cream,fontSize:16,outline:"none"}} />
+        {checked===null&&(
+          <button onClick={doCheck} disabled={!input.trim()}
+            style={{...baseBtn,background:input.trim()?C.plum:C.card,color:C.cream,padding:"14px 18px",fontSize:15,opacity:input.trim()?1:0.5}}>✓</button>
+        )}
+      </div>
+      {checked===null&&(
+        <button onClick={()=>setHintLv(h=>h+1)}
+          style={{...baseBtn,background:"transparent",color:C.muted,padding:"8px 0",fontSize:13,width:"100%"}}>
+          💡 ヒントを見る
+        </button>
+      )}
+      {checked!==null&&(
+        <div className="fade-in" style={{padding:16,background:C.card,borderRadius:12,borderLeft:"3px solid "+(checked?C.ok:C.ng),marginBottom:16}}>
+          <div style={{fontSize:14,marginBottom:4}}>
+            {checked
+              ? <span style={{color:C.ok}}>✓ Correct!</span>
+              : <span style={{color:C.ng}}>✗ 正解: <strong style={{color:C.lav}}>{q.w}</strong></span>}
+          </div>
+          <div style={{fontSize:13,color:C.muted,marginTop:8}}>例文</div>
+          <div style={{fontSize:14,fontStyle:"italic",lineHeight:1.5}}>{q.e}</div>
+        </div>
+      )}
+      {checked!==null&&(
+        <div style={{textAlign:"center"}}>
+          <button onClick={()=>{if(idx<questions.length-1){setIdx(idx+1);setInput("");setChecked(null);setHintLv(0);}else setDone(true);}}
+            style={{...baseBtn,background:C.plum,color:C.cream,padding:"12px 28px",fontSize:15}}>
+            {idx<questions.length-1?"Next →":"Results →"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════ STATS VIEW ═══════════════════
+function StatsView({ vocab, mastery, onReset }) {
+  const total=vocab.length;
+  const mastered=vocab.filter(v=>(mastery[v.w]||0)>=3).length;
+  const learning=vocab.filter(v=>{const m=mastery[v.w]||0;return m>0&&m<3;}).length;
+  const newW=total-mastered-learning;
+  const pct=Math.round((mastered/total)*100);
+  const cats=["c","a","t"];
+
+  const weak=vocab.filter(v=>{const m=mastery[v.w]||0;return m>0&&m<3;}).sort((a,b)=>(mastery[a.w]||0)-(mastery[b.w]||0)).slice(0,10);
+
+  return (
+    <div className="fade-in" style={{padding:"16px 20px"}}>
+      <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:700,marginBottom:20}}>Progress</div>
+      <div style={{textAlign:"center",marginBottom:24}}>
+        <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:56,fontWeight:700,color:C.lav}}>{pct}%</div>
+        <div style={{color:C.muted,fontSize:14}}>習得率 ({mastered} / {total} words)</div>
+      </div>
+      <div style={{display:"flex",gap:8,marginBottom:24}}>
+        {[{l:"習得済",v:mastered,c:C.ok},{l:"学習中",v:learning,c:C.gold},{l:"未学習",v:newW,c:C.muted}].map(s=>(
+          <div key={s.l} style={{flex:1,padding:12,background:C.card,borderRadius:10,textAlign:"center"}}>
+            <div style={{fontSize:24,fontWeight:700,color:s.c}}>{s.v}</div>
+            <div style={{fontSize:11,color:C.muted}}>{s.l}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{marginBottom:24}}>
+        <div style={{fontSize:13,color:C.muted,marginBottom:10}}>カテゴリ別:</div>
+        {cats.map(c=>{
+          const cw=vocab.filter(v=>v.c===c);
+          const cm=cw.filter(v=>(mastery[v.w]||0)>=3).length;
+          const cp=cw.length?Math.round((cm/cw.length)*100):0;
+          return (
+            <div key={c} style={{marginBottom:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4}}>
+                <span style={{color:CAT_C[c]}}>{CAT_L[c]}</span>
+                <span style={{color:C.muted}}>{cm}/{cw.length}</span>
+              </div>
+              <div style={{height:6,background:C.card,borderRadius:3,overflow:"hidden"}}>
+                <div style={{height:"100%",width:cp+"%",background:CAT_C[c],borderRadius:3,transition:"width 0.5s"}} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {weak.length>0&&(
+        <div style={{marginBottom:24}}>
+          <div style={{fontSize:13,color:C.muted,marginBottom:10}}>苦手な単語 (復習優先):</div>
+          {weak.map(v=>(
+            <div key={v.w} style={{display:"flex",justifyContent:"space-between",padding:"8px 12px",background:C.card,borderRadius:8,marginBottom:4,fontSize:13}}>
+              <span><span style={{color:C.lav,fontWeight:600}}>{v.w}</span> <span style={{color:C.muted}}>— {v.m}</span></span>
+              <span style={{color:C.gold}}>Lv{mastery[v.w]||0}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <button onClick={onReset}
+        style={{...baseBtn,background:"transparent",border:"1px solid "+C.bdr,color:C.muted,padding:"10px 0",fontSize:13,width:"100%"}}>
+        進捗をリセット
+      </button>
+    </div>
+  );
+}
+
+// ═══════════════════ MAIN APP ═══════════════════
+function App() {
+  const [mode, setMode] = useState("quiz");
+  const [mastery, setMastery] = useState(loadMastery);
+  const [catFilter, setCatFilter] = useState("all");
+
+  const handleAnswer = useCallback((word, correct) => {
+    setMastery(prev => {
+      const cur = prev[word] || 0;
+      const next = correct ? Math.min(cur+1, 3) : Math.max(cur-1, 0);
+      const updated = { ...prev, [word]: next };
+      saveMastery(updated);
+      return updated;
+    });
+  }, []);
+
+  const handleReset = () => {
+    if(confirm("進捗をすべてリセットしますか？")){
+      setMastery({});
+      saveMastery({});
+    }
+  };
+
+  const tabs = [
+    {id:"quiz",icon:"🎯",label:"Quiz"},
+    {id:"type",icon:"✍️",label:"Type"},
+    {id:"stats",icon:"📊",label:"Stats"},
+  ];
+  const masteredCount = VOCAB.filter(v=>(mastery[v.w]||0)>=3).length;
+
+  return (
+    <div style={{minHeight:"100vh",background:C.bg,color:C.cream,maxWidth:480,margin:"0 auto"}}>
+      {/* Header */}
+      <div style={{padding:"20px 20px 12px",borderBottom:"1px solid "+C.bdr}}>
+        <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:700,letterSpacing:1}}>ORINAS English Drill</div>
+        <div style={{display:"flex",alignItems:"center",gap:12,marginTop:8}}>
+          <div style={{flex:1,height:4,background:C.card,borderRadius:2,overflow:"hidden"}}>
+            <div style={{height:"100%",width:(masteredCount/VOCAB.length*100)+"%",background:"linear-gradient(90deg,"+C.dusty+","+C.lav+")",borderRadius:2,transition:"width 0.5s"}} />
+          </div>
+          <span style={{fontSize:12,color:C.muted}}>{masteredCount}/{VOCAB.length}</span>
+        </div>
+      </div>
+
+      {/* Category Filter */}
+      {(mode==="quiz"||mode==="type")&&(
+        <div style={{padding:"10px 20px",display:"flex",gap:6,overflowX:"auto"}}>
+          {[{id:"all",l:"All"},{id:"c",l:"Core"},{id:"a",l:"Advanced"},{id:"t",l:"Tough"}].map(f=>(
+            <button key={f.id} onClick={()=>setCatFilter(f.id)}
+              style={{...baseBtn,background:catFilter===f.id?C.plum:C.card,color:catFilter===f.id?C.cream:C.muted,
+                padding:"6px 14px",fontSize:12,whiteSpace:"nowrap",border:"1px solid "+(catFilter===f.id?C.plum:C.bdr)}}>
+              {f.l}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Content */}
+      <div style={{paddingBottom:80}}>
+        {mode==="quiz"&&<QuizMode vocab={VOCAB} mastery={mastery} onAnswer={handleAnswer} catFilter={catFilter} />}
+        {mode==="type"&&<TypeMode vocab={VOCAB} mastery={mastery} onAnswer={handleAnswer} catFilter={catFilter} />}
+        {mode==="stats"&&<StatsView vocab={VOCAB} mastery={mastery} onReset={handleReset} />}
+      </div>
+
+      {/* Bottom Nav */}
+      <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,
+        background:C.bg,borderTop:"1px solid "+C.bdr,display:"flex",padding:"8px 0 12px",zIndex:100}}>
+        {tabs.map(t=>(
+          <button key={t.id} onClick={()=>setMode(t.id)}
+            style={{...baseBtn,flex:1,background:"transparent",color:mode===t.id?C.lav:C.muted,
+              display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"6px 0"}}>
+            <span style={{fontSize:20}}>{t.icon}</span>
+            <span style={{fontSize:10,fontWeight:mode===t.id?600:400}}>{t.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
