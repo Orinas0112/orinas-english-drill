@@ -48,6 +48,10 @@
   .sparkle { animation: sparkle 0.8s ease-out; display:inline-block; }
   .wave { animation: wave 0.9s ease-in-out; transform-origin:70% 80%; display:inline-block; }
   .glow { animation: glowPulse 1.8s ease-in-out infinite; }
+  @keyframes spkPulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.22); } }
+  .spk { animation: spkPulse 0.7s ease-in-out infinite; }
+  @keyframes achPop { 0% { transform:scale(0.6) translateY(20px); opacity:0; } 60% { transform:scale(1.05) translateY(0); opacity:1; } 100% { transform:scale(1) translateY(0); opacity:1; } }
+  .ach-pop { animation: achPop 0.5s cubic-bezier(.2,.7,.3,1) both; }
 </style>
 </head>
 <body>
@@ -56,13 +60,34 @@
 const { useState, useEffect, useCallback, useRef } = React;
 
 // ═══════════════════ CONSTANTS ═══════════════════
-const C = {
+// Two palettes. ON_ACCENT is the text color for purple/accent surfaces (always light).
+const ON_ACCENT = "#F5F0F3";
+const DARK = {
   bg:"#110A14", card:"#1E1222", cardH:"#2A1830",
   plum:"#5C2E50", deep:"#2D0A4E", dusty:"#8E5687",
   lav:"#C9A9C5", lilac:"#E8D5E4", cream:"#F5F0F3",
   muted:"#7B6883", ok:"#6ECB73", ng:"#E87070",
   gold:"#F0C850", bdr:"#3A2840",
 };
+const LIGHT = {
+  bg:"#FAFAFA", card:"#FFFFFF", cardH:"#F1EAF1",
+  plum:"#5C2E50", deep:"#5C2E50", dusty:"#8E5687",
+  lav:"#7A4A72", lilac:"#5C2E50", cream:"#2C2C2C",
+  muted:"#8A7D88", ok:"#2E9E3A", ng:"#D2433F",
+  gold:"#B5851A", bdr:"#E4DCE4",
+};
+// Mutable active palette. Reassigned by applyTheme() before each render.
+let C = DARK;
+function applyTheme(mode) { C = (mode === "light") ? LIGHT : DARK; }
+function loadTheme() {
+  try {
+    const r = localStorage.getItem('orinas-theme-v1');
+    if (r === "light" || r === "dark") return r;
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) return "light";
+    return "dark";
+  } catch(e) { return "dark"; }
+}
+function saveTheme(t) { try { localStorage.setItem('orinas-theme-v1', t); } catch(e) {} }
 const CAT_L = {
   c:"基本 Core", a:"上級 Advanced", t:"厳しい場面 Tough",
   cr:"キャリア開発", pr:"称賛・承認", wb:"ウェルビーイング",
@@ -733,6 +758,75 @@ function getWordOfTheDay(vocab, mastery) {
   return v;
 }
 
+// ── Achievements / badges ──
+function loadAch() {
+  try { const r = localStorage.getItem('orinas-ach-v1'); return r ? JSON.parse(r) : {}; }
+  catch(e) { return {}; }
+}
+function saveAch(a) { try { localStorage.setItem('orinas-ach-v1', JSON.stringify(a)); } catch(e) {} }
+function loadAchc() {
+  try { const r = localStorage.getItem('orinas-achc-v1'); return r ? JSON.parse(r) : { correctTotal:0, consecutiveCorrect:0, composeDone:0 }; }
+  catch(e) { return { correctTotal:0, consecutiveCorrect:0, composeDone:0 }; }
+}
+function saveAchc(c) { try { localStorage.setItem('orinas-achc-v1', JSON.stringify(c)); } catch(e) {} }
+// Each test receives the live stats object and returns true once unlocked.
+const ACH = [
+  { id:"first_step",   icon:"🌟",   name:"First Step",     desc:"初めて正解した",            test:s=>s.correctTotal>=1 },
+  { id:"on_fire",      icon:"🔥",   name:"On Fire",        desc:"3日連続で学習",            test:s=>s.streak>=3 },
+  { id:"perfect",      icon:"💎",   name:"Perfect Round",  desc:"10問全問正解",             test:s=>s.perfectRound },
+  { id:"first_write",  icon:"📝",   name:"First Compose",  desc:"初めて英作文を提出",        test:s=>s.composeDone>=1 },
+  { id:"century",      icon:"💯",   name:"Century",        desc:"累計100問正解",            test:s=>s.correctTotal>=100 },
+  { id:"speed_demon",  icon:"⚡",   name:"Speed Demon",    desc:"Typeで5連続正解",          test:s=>s.typeFive },
+  { id:"bookworm",     icon:"📚",   name:"Bookworm",       desc:"100語以上を学習中以上に",   test:s=>s.learnPlus>=100 },
+  { id:"half_way",     icon:"🏅",   name:"Half Way",       desc:"全体の50%を習得",          test:s=>s.total>0 && s.masteredCount>=s.total*0.5 },
+  { id:"completionist",icon:"👑",   name:"Completionist",  desc:"全単語を習得",             test:s=>s.total>0 && s.masteredCount>=s.total },
+  { id:"dedicated",    icon:"🔥🔥",  name:"Dedicated",      desc:"7日連続で学習",            test:s=>s.streak>=7 },
+  { id:"unstoppable",  icon:"🔥🔥🔥", name:"Unstoppable",    desc:"30日連続で学習",           test:s=>s.streak>=30 },
+  { id:"sharpshooter", icon:"🎯",   name:"Sharpshooter",   desc:"20問連続正解",             test:s=>s.consecutiveCorrect>=20 },
+];
+
+// ═══════════════════ TEXT-TO-SPEECH BUTTON ═══════════════════
+function SpeakButton({ text, size }) {
+  const [on, setOn] = useState(false);
+  const sz = size || 16;
+  const speak = (e) => {
+    e.stopPropagation();
+    const synth = window.speechSynthesis;
+    if (!synth) return;
+    if (on) { synth.cancel(); setOn(false); return; }
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "en-US"; u.rate = 0.85;
+    u.onend = () => setOn(false);
+    u.onerror = () => setOn(false);
+    setOn(true);
+    synth.speak(u);
+  };
+  return (
+    <button onClick={speak} title="読み上げ"
+      className={on?"spk":""}
+      style={{...baseBtn,background:"transparent",padding:"2px 4px",fontSize:sz,lineHeight:1,color:C.lav,display:"inline-block",verticalAlign:"middle"}}>
+      {on?"🔇":"🔊"}
+    </button>
+  );
+}
+
+// ═══════════════════ ACHIEVEMENT POPUP ═══════════════════
+function AchievementPopup({ ach }) {
+  return (
+    <div className="ach-pop" style={{position:"fixed",top:16,left:"50%",transform:"translateX(-50%)",zIndex:9999,
+      background:"linear-gradient(135deg,"+C.plum+","+C.deep+")",color:ON_ACCENT,padding:"12px 20px",borderRadius:16,
+      display:"flex",alignItems:"center",gap:12,boxShadow:"0 10px 32px rgba(0,0,0,0.5)",border:"1px solid "+C.gold,maxWidth:340}}>
+      <span className="lv-bounce" style={{fontSize:34,lineHeight:1}}>{ach.icon}</span>
+      <div style={{textAlign:"left"}}>
+        <div style={{fontSize:11,letterSpacing:2,color:C.gold,fontWeight:700}}>ACHIEVEMENT UNLOCKED!</div>
+        <div style={{fontSize:16,fontWeight:700,marginTop:2}}>{ach.name}</div>
+        <div style={{fontSize:11,opacity:0.85,marginTop:1}}>{ach.desc}</div>
+      </div>
+    </div>
+  );
+}
+
 // ═══════════════════ RESUME DIALOG ═══════════════════
 function ResumeDialog({ answered, total, onResume, onNew }) {
   return (
@@ -741,7 +835,7 @@ function ResumeDialog({ answered, total, onResume, onNew }) {
       <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:20,fontWeight:700,marginBottom:8}}>前回の続きがあります</div>
       <div style={{color:C.muted,fontSize:14,marginBottom:28}}>{answered} / {total} 問まで進んでいます。<br/>続きから再開しますか？</div>
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
-        <button onClick={onResume} style={{...baseBtn,background:C.plum,color:C.cream,padding:"14px 0",fontSize:15,width:"100%"}}>続きから再開</button>
+        <button onClick={onResume} style={{...baseBtn,background:C.plum,color:ON_ACCENT,padding:"14px 0",fontSize:15,width:"100%"}}>続きから再開</button>
         <button onClick={onNew} style={{...baseBtn,background:"transparent",border:"1px solid "+C.bdr,color:C.muted,padding:"12px 0",fontSize:14,width:"100%"}}>新しく始める</button>
       </div>
     </div>
@@ -749,7 +843,7 @@ function ResumeDialog({ answered, total, onResume, onNew }) {
 }
 
 // ═══════════════════ QUIZ MODE ═══════════════════
-function QuizMode({ vocab, mastery, onAnswer, onCombo, catFilter }) {
+function QuizMode({ vocab, mastery, onAnswer, onCombo, onPerfect, catFilter }) {
   const [questions, setQuestions] = useState([]);
   const [idx, setIdx] = useState(0);
   const [selected, setSelected] = useState(null);
@@ -798,7 +892,7 @@ function QuizMode({ vocab, mastery, onAnswer, onCombo, catFilter }) {
         )}
         <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:32,fontWeight:700,marginBottom:8}}>{correct} / {results.length}</div>
         <div style={{color:C.muted,marginBottom:32}}>{perfect?"全問正解！圧巻です":correct>=8?"Excellent!":correct>=5?"Good progress!":"Keep practicing!"}</div>
-        <button onClick={initNew} style={{...baseBtn,background:C.plum,color:C.cream,padding:"14px 32px",fontSize:16}}>Next Round →</button>
+        <button onClick={initNew} style={{...baseBtn,background:C.plum,color:ON_ACCENT,padding:"14px 32px",fontSize:16}}>Next Round →</button>
       </div>
     );
   }
@@ -837,7 +931,7 @@ function QuizMode({ vocab, mastery, onAnswer, onCombo, catFilter }) {
                 const nr=[...results,ok];
                 setResults(nr);
                 saveSession('quiz',{questions,results:nr});
-                if(ok){ const nc=combo+1; setCombo(nc); confetti(nc>=5?44:22, nc>=5); if(onCombo) onCombo(nc); }
+                if(ok){ const nc=combo+1; setCombo(nc); confetti(nc>=5?44:22, nc>=5); if(onCombo) onCombo(nc,'quiz'); }
                 else setCombo(0);
               }}
               style={{...baseBtn,background:bg,border:"1.5px solid "+bdr,padding:"14px 16px",fontSize:15,color:C.cream,textAlign:"left",width:"100%"}}>
@@ -853,14 +947,17 @@ function QuizMode({ vocab, mastery, onAnswer, onCombo, catFilter }) {
       )}
       {selected!==null&&(
         <div className="fade-in" style={{marginTop:20,padding:16,background:C.card,borderRadius:12,borderLeft:"3px solid "+(isCorrect?C.ok:C.ng)}}>
-          <div style={{fontSize:13,color:C.muted,marginBottom:4}}>例文</div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+            <span style={{fontSize:13,color:C.muted}}>例文</span>
+            <SpeakButton text={q.word.e} />
+          </div>
           <div style={{fontSize:14,fontStyle:"italic",lineHeight:1.5}}>{q.word.e}</div>
         </div>
       )}
       {selected!==null&&(
         <div style={{textAlign:"center",marginTop:20}}>
-          <button onClick={()=>{if(idx<questions.length-1){setIdx(idx+1);setSelected(null);}else{clearSession('quiz');setDone(true);}}}
-            style={{...baseBtn,background:C.plum,color:C.cream,padding:"12px 28px",fontSize:15}}>
+          <button onClick={()=>{if(idx<questions.length-1){setIdx(idx+1);setSelected(null);}else{clearSession('quiz');if(onPerfect&&results.length>=10&&results.every(Boolean))onPerfect();setDone(true);}}}
+            style={{...baseBtn,background:C.plum,color:ON_ACCENT,padding:"12px 28px",fontSize:15}}>
             {idx<questions.length-1?"Next →":"Results →"}
           </button>
         </div>
@@ -870,7 +967,7 @@ function QuizMode({ vocab, mastery, onAnswer, onCombo, catFilter }) {
 }
 
 // ═══════════════════ TYPE MODE ═══════════════════
-function TypeMode({ vocab, mastery, onAnswer, onCombo, catFilter }) {
+function TypeMode({ vocab, mastery, onAnswer, onCombo, onPerfect, catFilter }) {
   const [questions, setQuestions] = useState([]);
   const [idx, setIdx] = useState(0);
   const [input, setInput] = useState("");
@@ -929,7 +1026,7 @@ function TypeMode({ vocab, mastery, onAnswer, onCombo, catFilter }) {
             ))}
           </div>
         )}
-        <button onClick={initNew} style={{...baseBtn,background:C.plum,color:C.cream,padding:"14px 32px",fontSize:16,marginTop:24}}>Next Round →</button>
+        <button onClick={initNew} style={{...baseBtn,background:C.plum,color:ON_ACCENT,padding:"14px 32px",fontSize:16,marginTop:24}}>Next Round →</button>
       </div>
     );
   }
@@ -944,7 +1041,7 @@ function TypeMode({ vocab, mastery, onAnswer, onCombo, catFilter }) {
     const nr=[...results, ok];
     setResults(nr);
     saveSession('type',{questions,results:nr});
-    if(ok){ const nc=combo+1; setCombo(nc); confetti(nc>=5?44:22, nc>=5); if(onCombo) onCombo(nc); }
+    if(ok){ const nc=combo+1; setCombo(nc); confetti(nc>=5?44:22, nc>=5); if(onCombo) onCombo(nc,'type'); }
     else setCombo(0);
   };
 
@@ -971,7 +1068,7 @@ function TypeMode({ vocab, mastery, onAnswer, onCombo, catFilter }) {
             background:C.card,color:C.cream,fontSize:16,outline:"none"}} />
         {checked===null&&(
           <button onClick={doCheck} disabled={!input.trim()}
-            style={{...baseBtn,background:input.trim()?C.plum:C.card,color:C.cream,padding:"14px 18px",fontSize:15,opacity:input.trim()?1:0.5}}>✓</button>
+            style={{...baseBtn,background:input.trim()?C.plum:C.card,color:input.trim()?ON_ACCENT:C.muted,padding:"14px 18px",fontSize:15,opacity:input.trim()?1:0.5}}>✓</button>
         )}
       </div>
       {checked===null&&(
@@ -992,14 +1089,17 @@ function TypeMode({ vocab, mastery, onAnswer, onCombo, catFilter }) {
               ? <span style={{color:C.ok}}>✓ Correct!</span>
               : <span style={{color:C.ng}}>✗ 正解: <strong style={{color:C.lav}}>{q.w}</strong></span>}
           </div>
-          <div style={{fontSize:13,color:C.muted,marginTop:8}}>例文</div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:8}}>
+            <span style={{fontSize:13,color:C.muted}}>例文</span>
+            <SpeakButton text={q.e} />
+          </div>
           <div style={{fontSize:14,fontStyle:"italic",lineHeight:1.5}}>{q.e}</div>
         </div>
       )}
       {checked!==null&&(
         <div style={{textAlign:"center"}}>
-          <button onClick={()=>{if(idx<questions.length-1){setIdx(idx+1);setInput("");setChecked(null);setHintLv(0);}else{clearSession('type');setDone(true);}}}
-            style={{...baseBtn,background:C.plum,color:C.cream,padding:"12px 28px",fontSize:15}}>
+          <button onClick={()=>{if(idx<questions.length-1){setIdx(idx+1);setInput("");setChecked(null);setHintLv(0);}else{clearSession('type');if(onPerfect&&results.length>=10&&results.every(Boolean))onPerfect();setDone(true);}}}
+            style={{...baseBtn,background:C.plum,color:ON_ACCENT,padding:"12px 28px",fontSize:15}}>
             {idx<questions.length-1?"Next →":"Results →"}
           </button>
         </div>
@@ -1009,7 +1109,7 @@ function TypeMode({ vocab, mastery, onAnswer, onCombo, catFilter }) {
 }
 
 // ═══════════════════ STATS VIEW ═══════════════════
-function StatsView({ vocab, mastery, daily, calendar, xp, onReset }) {
+function StatsView({ vocab, mastery, daily, calendar, xp, ach, onReset }) {
   const lv = levelInfo(xp || 0);
   const curIdx = lv.lvNum - 1;
   const total=vocab.length;
@@ -1141,13 +1241,39 @@ function StatsView({ vocab, mastery, daily, calendar, xp, onReset }) {
         <div style={{marginBottom:24}}>
           <div style={{fontSize:13,color:C.muted,marginBottom:10}}>苦手な単語 (復習優先):</div>
           {weak.map(v=>(
-            <div key={v.w} style={{display:"flex",justifyContent:"space-between",padding:"8px 12px",background:C.card,borderRadius:8,marginBottom:4,fontSize:13}}>
+            <div key={v.w} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 12px",background:C.card,borderRadius:8,marginBottom:4,fontSize:13}}>
               <span><span style={{color:C.lav,fontWeight:600}}>{v.w}</span> <span style={{color:C.muted}}>— {v.m}</span></span>
-              <span style={{color:C.gold}}>Lv{mastery[v.w]||0}</span>
+              <span style={{display:"flex",alignItems:"center",gap:6}}>
+                <SpeakButton text={v.w} size={14} />
+                <span style={{color:C.gold}}>Lv{mastery[v.w]||0}</span>
+              </span>
             </div>
           ))}
         </div>
       )}
+      {/* Achievements */}
+      <div style={{marginBottom:24}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:12}}>
+          <span style={{fontSize:13,color:C.muted}}>アチーブメント</span>
+          <span style={{fontSize:13,color:C.gold,fontWeight:700}}>{ACH.filter(a=>(ach||{})[a.id]).length} / {ACH.length}</span>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+          {ACH.map(a=>{
+            const got=!!(ach||{})[a.id];
+            return (
+              <div key={a.id} title={a.desc}
+                style={{position:"relative",padding:"14px 6px",borderRadius:12,textAlign:"center",
+                  background:got?C.card:C.bg,border:"1px solid "+(got?C.gold:C.bdr),
+                  filter:got?"none":"grayscale(1)",opacity:got?1:0.4,transition:"all .3s"}}>
+                {got&&<span className="sparkle" style={{position:"absolute",top:4,right:6,fontSize:11}}>✨</span>}
+                <div style={{fontSize:28,lineHeight:1,marginBottom:6}}>{a.icon}</div>
+                <div style={{fontSize:11,fontWeight:700,color:got?C.lav:C.muted,lineHeight:1.2}}>{a.name}</div>
+                <div style={{fontSize:9,color:C.muted,marginTop:3,lineHeight:1.2}}>{a.desc}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
       <button onClick={onReset}
         style={{...baseBtn,background:"transparent",border:"1px solid "+C.bdr,color:C.muted,padding:"10px 0",fontSize:13,width:"100%"}}>
         進捗をリセット
@@ -1250,7 +1376,7 @@ function ComposeMode({ onSolved }) {
         style={{width:"100%",padding:"14px 16px",borderRadius:12,border:"1.5px solid "+C.bdr,
           background:C.card,color:C.cream,fontSize:15,outline:"none",resize:"vertical",lineHeight:1.6}} />
       <button onClick={submit} disabled={!canSend}
-        style={{...baseBtn,background:canSend?C.plum:C.card,color:C.cream,padding:"14px 0",fontSize:15,width:"100%",marginTop:12,opacity:canSend?1:0.5}}>
+        style={{...baseBtn,background:canSend?C.plum:C.card,color:canSend?ON_ACCENT:C.muted,padding:"14px 0",fontSize:15,width:"100%",marginTop:12,opacity:canSend?1:0.5}}>
         {loading?"添削中…":"添削してもらう"}
       </button>
       {error&&(
@@ -1310,7 +1436,7 @@ function LevelUpOverlay({ info, onClose }) {
         {stage>=1 && (
           <div className="fade-in">
             <div className="lv-bounce" style={{fontSize:104,lineHeight:1,marginBottom:14}}>{info.icon}</div>
-            <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:40,fontWeight:700,color:C.cream}}>{info.name}</div>
+            <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:40,fontWeight:700,color:ON_ACCENT}}>{info.name}</div>
             <div style={{fontSize:14,color:C.muted,marginTop:8}}>Lv{info.lvNum} に昇格しました</div>
           </div>
         )}
@@ -1322,6 +1448,8 @@ function LevelUpOverlay({ info, onClose }) {
 
 // ═══════════════════ MAIN APP ═══════════════════
 function App() {
+  const [theme, setTheme] = useState(loadTheme);
+  applyTheme(theme); // reassign module-scoped palette before rendering children
   const [mode, setMode] = useState("quiz");
   const [mastery, setMastery] = useState(loadMastery);
   const [daily, setDaily] = useState(loadDaily);
@@ -1334,15 +1462,76 @@ function App() {
   const [wotd] = useState(() => getWordOfTheDay(VOCAB, loadMastery()));
   const [catFilter, setCatFilter] = useState("all");
   const [headerFx, setHeaderFx] = useState({ type:"", key:0 });
+  const [ach, setAch] = useState(loadAch);
+  const [achQueue, setAchQueue] = useState([]);
+  const achRef = useRef(ach);
+  const achcRef = useRef(loadAchc());
   // Replay a momentary animation on the header level icon (sparkle / wave).
   const fireFx = useCallback((type) => setHeaderFx(f => ({ type, key: f.key + 1 })), []);
   // 5-in-a-row (and every 5 thereafter) makes the level icon sparkle.
-  const handleCombo = useCallback((nc) => { if (nc > 0 && nc % 5 === 0) fireFx("sparkle"); }, [fireFx]);
+  const handleCombo = useCallback((nc, m) => {
+    if (nc > 0 && nc % 5 === 0) fireFx("sparkle");
+    if (m === "type" && nc >= 5) evalAchRef.current && evalAchRef.current({ typeFive:true });
+  }, [fireFx]);
+  const evalAchRef = useRef(null);
   const masteryRef = useRef(mastery);
   const dailyRef = useRef(daily);
   const streakRef = useRef(streak);
   const xpRef = useRef(xp);
   const calRef = useRef(calendar);
+
+  // Theme — keep <body> background/text in sync and persist choice.
+  useEffect(() => {
+    applyTheme(theme);
+    document.body.style.background = C.bg;
+    document.body.style.color = C.cream;
+    saveTheme(theme);
+  }, [theme]);
+  const toggleTheme = useCallback(() => setTheme(t => (t === "dark" ? "light" : "dark")), []);
+
+  // Evaluate achievements against current stats; unlock newly-earned badges.
+  const evalAch = useCallback((extra, silent) => {
+    const m = masteryRef.current;
+    let masteredCount = 0, learnPlus = 0;
+    for (let i=0;i<VOCAB.length;i++) {
+      const lvl = m[VOCAB[i].w] || 0;
+      if (lvl >= 3) masteredCount++;
+      if (lvl >= 1) learnPlus++;
+    }
+    const c = achcRef.current;
+    const s = {
+      correctTotal: c.correctTotal || 0,
+      consecutiveCorrect: c.consecutiveCorrect || 0,
+      composeDone: c.composeDone || 0,
+      streak: effectiveStreak(streakRef.current),
+      masteredCount, learnPlus, total: VOCAB.length,
+      typeFive: false, perfectRound: false,
+      ...(extra || {}),
+    };
+    const cur = achRef.current;
+    const newly = [];
+    for (let i=0;i<ACH.length;i++) {
+      const a = ACH[i];
+      if (!cur[a.id] && a.test(s)) newly.push(a);
+    }
+    if (newly.length === 0) return;
+    const updated = { ...cur };
+    newly.forEach(a => { updated[a.id] = true; });
+    achRef.current = updated; setAch(updated); saveAch(updated);
+    if (!silent) setAchQueue(q => [...q, ...newly]);
+  }, []);
+  evalAchRef.current = evalAch;
+
+  // Silent baseline evaluation on mount (unlock anything already earned).
+  useEffect(() => { evalAch(null, true); }, [evalAch]);
+
+  // Show queued achievement popups one at a time.
+  useEffect(() => {
+    if (achQueue.length === 0) return;
+    confetti(60, true);
+    const t = setTimeout(() => setAchQueue(q => q.slice(1)), 3600);
+    return () => clearTimeout(t);
+  }, [achQueue]);
 
   // auto-dismiss celebration toast
   useEffect(() => {
@@ -1417,12 +1606,22 @@ function App() {
     saveMastery(updated);
     recordSolved({ cur, next });
     if (correct) addXp(xpGain || 0);
-  }, [recordSolved, addXp]);
+    const c = achcRef.current;
+    if (correct) { c.correctTotal = (c.correctTotal||0)+1; c.consecutiveCorrect = (c.consecutiveCorrect||0)+1; }
+    else { c.consecutiveCorrect = 0; }
+    achcRef.current = c; saveAchc(c);
+    evalAch();
+  }, [recordSolved, addXp, evalAch]);
 
   const handleQuizAnswer = useCallback((word, correct) => handleAnswer(word, correct, 10), [handleAnswer]);
   const handleTypeAnswer = useCallback((word, correct) => handleAnswer(word, correct, 15), [handleAnswer]);
 
-  const handleCompose = useCallback(() => { recordSolved(null); addXp(30); }, [recordSolved, addXp]);
+  const handleCompose = useCallback(() => {
+    recordSolved(null); addXp(30);
+    const c = achcRef.current; c.composeDone = (c.composeDone||0)+1; achcRef.current = c; saveAchc(c);
+    evalAch();
+  }, [recordSolved, addXp, evalAch]);
+  const handlePerfect = useCallback(() => evalAch({ perfectRound:true }), [evalAch]);
 
   const handleReset = () => {
     if(confirm("進捗をすべてリセットしますか？")){
@@ -1461,11 +1660,14 @@ function App() {
             <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:34,fontWeight:700,color:C.lilac,margin:"18px 0 8px",lineHeight:1.2}}>{wotd.w}</div>
             <div style={{fontSize:16,color:C.cream,marginBottom:18}}>{wotd.m}</div>
             <div style={{padding:"14px 16px",background:C.bg,borderRadius:12,borderLeft:"3px solid "+C.lav,textAlign:"left",marginBottom:24}}>
-              <div style={{fontSize:12,color:C.muted,marginBottom:4}}>例文</div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+                <span style={{fontSize:12,color:C.muted}}>例文</span>
+                <SpeakButton text={wotd.e} />
+              </div>
               <div style={{fontSize:15,fontStyle:"italic",lineHeight:1.6,color:C.lilac}}>{wotd.e}</div>
             </div>
             <button onClick={()=>{setShowWotd(false);fireFx("wave");}}
-              style={{...baseBtn,background:C.plum,color:C.cream,padding:"14px 0",fontSize:15,width:"100%"}}>学習を始める →</button>
+              style={{...baseBtn,background:C.plum,color:ON_ACCENT,padding:"14px 0",fontSize:15,width:"100%"}}>学習を始める →</button>
           </div>
         </div>
       )}
@@ -1473,10 +1675,13 @@ function App() {
       {/* Level-up overlay (2-stage, bouncing icon) */}
       {levelUp&&<LevelUpOverlay info={levelUp} onClose={()=>setLevelUp(null)} />}
 
+      {/* Achievement unlocked popup */}
+      {achQueue.length>0&&<AchievementPopup ach={achQueue[0]} />}
+
       {/* Celebration toast */}
       {celebrate&&(
         <div className="pulse" style={{position:"fixed",top:16,left:"50%",transform:"translateX(-50%)",zIndex:9998,
-          background:C.plum,color:C.cream,padding:"12px 22px",borderRadius:999,fontSize:15,fontWeight:700,
+          background:C.plum,color:ON_ACCENT,padding:"12px 22px",borderRadius:999,fontSize:15,fontWeight:700,
           boxShadow:"0 8px 28px rgba(0,0,0,0.45)",border:"1px solid "+C.dusty,whiteSpace:"nowrap"}}>
           {celebrate}
         </div>
@@ -1486,8 +1691,15 @@ function App() {
       <div style={{padding:"20px 20px 12px",borderBottom:"1px solid "+C.bdr}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:22,fontWeight:700,letterSpacing:1}}>ORINAS English Drill</div>
-          <div title="連続学習日数" style={{display:"flex",alignItems:"center",gap:4,background:C.card,padding:"4px 10px",borderRadius:999,fontSize:14,fontWeight:700,color:streakDays>0?C.gold:C.muted}}>
-            <span style={{fontSize:16,filter:streakDays>0?"none":"grayscale(1) opacity(0.6)"}}>🔥</span>{streakDays}
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <button onClick={toggleTheme} title={theme==="dark"?"ライトモードに切替":"ダークモードに切替"}
+              style={{...baseBtn,background:C.card,border:"1px solid "+C.bdr,color:C.lav,width:34,height:34,
+                display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,borderRadius:999}}>
+              {theme==="dark"?"☀️":"🌙"}
+            </button>
+            <div title="連続学習日数" style={{display:"flex",alignItems:"center",gap:4,background:C.card,padding:"4px 10px",borderRadius:999,fontSize:14,fontWeight:700,color:streakDays>0?C.gold:C.muted}}>
+              <span style={{fontSize:16,filter:streakDays>0?"none":"grayscale(1) opacity(0.6)"}}>🔥</span>{streakDays}
+            </div>
           </div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:12,marginTop:10}}>
@@ -1547,10 +1759,10 @@ function App() {
 
       {/* Content */}
       <div style={{paddingBottom:80}}>
-        {mode==="quiz"&&<QuizMode vocab={VOCAB} mastery={mastery} onAnswer={handleQuizAnswer} onCombo={handleCombo} catFilter={catFilter} />}
-        {mode==="type"&&<TypeMode vocab={VOCAB} mastery={mastery} onAnswer={handleTypeAnswer} onCombo={handleCombo} catFilter={catFilter} />}
+        {mode==="quiz"&&<QuizMode vocab={VOCAB} mastery={mastery} onAnswer={handleQuizAnswer} onCombo={handleCombo} onPerfect={handlePerfect} catFilter={catFilter} />}
+        {mode==="type"&&<TypeMode vocab={VOCAB} mastery={mastery} onAnswer={handleTypeAnswer} onCombo={handleCombo} onPerfect={handlePerfect} catFilter={catFilter} />}
         {mode==="compose"&&<ComposeMode onSolved={handleCompose} />}
-        {mode==="stats"&&<StatsView vocab={VOCAB} mastery={mastery} daily={daily} calendar={calendar} xp={xp} onReset={handleReset} />}
+        {mode==="stats"&&<StatsView vocab={VOCAB} mastery={mastery} daily={daily} calendar={calendar} xp={xp} ach={ach} onReset={handleReset} />}
       </div>
 
       {/* Bottom Nav */}
