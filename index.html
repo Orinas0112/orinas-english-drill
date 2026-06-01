@@ -293,11 +293,12 @@ function saveMastery(m) {
   try { localStorage.setItem('orinas-drill-v1', JSON.stringify(m)); } catch(e) {}
 }
 
+const GOAL = 10; // daily goal: total problems
+
 // ── Today's summary (date-stamped, resets on new day) ──
-const todayKey = () => {
-  const d = new Date();
-  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
-};
+const dayKey = (d) => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const todayKey = () => dayKey(new Date());
+const yesterdayKey = () => { const d = new Date(); d.setDate(d.getDate()-1); return dayKey(d); };
 function loadDaily() {
   const fresh = { date: todayKey(), solved: 0, learned: 0, mastered: 0 };
   try {
@@ -309,6 +310,49 @@ function loadDaily() {
 }
 function saveDaily(d) {
   try { localStorage.setItem('orinas-daily-v1', JSON.stringify(d)); } catch(e) {}
+}
+
+// ── Streak (consecutive study days) ──
+function loadStreak() {
+  try { const r = localStorage.getItem('orinas-streak-v1'); return r ? JSON.parse(r) : { count:0, lastDate:null }; }
+  catch(e) { return { count:0, lastDate:null }; }
+}
+function saveStreak(s) {
+  try { localStorage.setItem('orinas-streak-v1', JSON.stringify(s)); } catch(e) {}
+}
+// Displayed streak: alive only if last study was today or yesterday, else 0.
+function effectiveStreak(s) {
+  if (!s || !s.lastDate) return 0;
+  if (s.lastDate === todayKey() || s.lastDate === yesterdayKey()) return s.count;
+  return 0;
+}
+
+// ── Confetti (Web Animations API, no dependency) ──
+function confetti(n, big) {
+  if (typeof document === "undefined" || !document.body) return;
+  n = n || 24;
+  const colors = [C.gold, C.ok, C.lav, C.dusty, C.lilac, "#6A9FD8"];
+  const root = document.createElement("div");
+  root.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden";
+  document.body.appendChild(root);
+  for (let i=0;i<n;i++) {
+    const p = document.createElement("div");
+    const size = 6 + Math.random()*6;
+    const left = big ? Math.random()*100 : (40 + Math.random()*20);
+    const startTop = big ? -8 : (38 + Math.random()*12);
+    const color = colors[Math.floor(Math.random()*colors.length)];
+    const xdrift = (Math.random()*2-1) * (big ? 180 : 90);
+    const ydrift = (big ? 110 : 70);
+    p.style.cssText = "position:absolute;top:"+startTop+"%;left:"+left+"%;width:"+size+"px;height:"+(size*0.6)+"px;background:"+color+";border-radius:2px";
+    root.appendChild(p);
+    try {
+      p.animate([
+        { transform:"translate(0,0) rotate(0deg)", opacity:1 },
+        { transform:"translate("+xdrift+"px,"+ydrift+"vh) rotate("+(Math.random()*720-360)+"deg)", opacity:0 }
+      ], { duration: 900 + Math.random()*900, delay: Math.random()*150, easing:"cubic-bezier(.2,.6,.4,1)", fill:"forwards" });
+    } catch(e) {}
+  }
+  setTimeout(() => root.remove(), 2200);
 }
 
 // ── In-progress session (resume support) ──
@@ -352,6 +396,7 @@ function QuizMode({ vocab, mastery, onAnswer, catFilter }) {
   const [results, setResults] = useState([]);
   const [done, setDone] = useState(false);
   const [resume, setResume] = useState(null);
+  const [combo, setCombo] = useState(0);
   const firstRef = useRef(true);
 
   const initNew = () => {
@@ -361,7 +406,7 @@ function QuizMode({ vocab, mastery, onAnswer, catFilter }) {
       const wrong = pickWrong(v, vocab);
       return { word:v, dir:d, choices:shuffle([v,...wrong]) };
     });
-    clearSession('quiz'); setResume(null);
+    clearSession('quiz'); setResume(null); setCombo(0);
     setQuestions(qs); setIdx(0); setSelected(null); setResults([]); setDone(false);
   };
   useEffect(() => {
@@ -376,7 +421,7 @@ function QuizMode({ vocab, mastery, onAnswer, catFilter }) {
   const doResume = () => {
     const s = resume;
     setQuestions(s.questions); setResults(s.results); setIdx(s.results.length);
-    setSelected(null); setDone(false); setResume(null);
+    setSelected(null); setDone(false); setResume(null); setCombo(0);
   };
 
   if (resume) return <ResumeDialog answered={resume.results.length} total={resume.questions.length} onResume={doResume} onNew={initNew} />;
@@ -427,6 +472,8 @@ function QuizMode({ vocab, mastery, onAnswer, catFilter }) {
                 const nr=[...results,ok];
                 setResults(nr);
                 saveSession('quiz',{questions,results:nr});
+                if(ok){ const nc=combo+1; setCombo(nc); confetti(nc>=5?44:22, nc>=5); }
+                else setCombo(0);
               }}
               style={{...baseBtn,background:bg,border:"1.5px solid "+bdr,padding:"14px 16px",fontSize:15,color:C.cream,textAlign:"left",width:"100%"}}>
               {q.dir==="jp"?ch.w:ch.m}
@@ -434,6 +481,11 @@ function QuizMode({ vocab, mastery, onAnswer, catFilter }) {
           );
         })}
       </div>
+      {isCorrect&&combo>=3&&(
+        <div className="pulse" style={{marginTop:16,textAlign:"center",fontSize:18,fontWeight:700,color:C.gold}}>
+          {combo>=5?"On fire! 🔥🔥🔥":combo+" in a row! 🔥"}
+        </div>
+      )}
       {selected!==null&&(
         <div className="fade-in" style={{marginTop:20,padding:16,background:C.card,borderRadius:12,borderLeft:"3px solid "+(isCorrect?C.ok:C.ng)}}>
           <div style={{fontSize:13,color:C.muted,marginBottom:4}}>例文</div>
@@ -462,12 +514,13 @@ function TypeMode({ vocab, mastery, onAnswer, catFilter }) {
   const [results, setResults] = useState([]);
   const [done, setDone] = useState(false);
   const [resume, setResume] = useState(null);
+  const [combo, setCombo] = useState(0);
   const inputRef = useRef(null);
   const firstRef = useRef(true);
 
   const initNew = () => {
     const sel = selectWords(vocab, mastery, 10, catFilter);
-    clearSession('type'); setResume(null);
+    clearSession('type'); setResume(null); setCombo(0);
     setQuestions(sel); setIdx(0); setInput(""); setChecked(null); setHintLv(0); setResults([]); setDone(false);
   };
   useEffect(() => {
@@ -483,7 +536,7 @@ function TypeMode({ vocab, mastery, onAnswer, catFilter }) {
   const doResume = () => {
     const s = resume;
     setQuestions(s.questions); setResults(s.results); setIdx(s.results.length);
-    setInput(""); setChecked(null); setHintLv(0); setDone(false); setResume(null);
+    setInput(""); setChecked(null); setHintLv(0); setDone(false); setResume(null); setCombo(0);
   };
 
   if (resume) return <ResumeDialog answered={resume.results.length} total={resume.questions.length} onResume={doResume} onNew={initNew} />;
@@ -521,6 +574,8 @@ function TypeMode({ vocab, mastery, onAnswer, catFilter }) {
     const nr=[...results, ok];
     setResults(nr);
     saveSession('type',{questions,results:nr});
+    if(ok){ const nc=combo+1; setCombo(nc); confetti(nc>=5?44:22, nc>=5); }
+    else setCombo(0);
   };
 
   return (
@@ -554,6 +609,11 @@ function TypeMode({ vocab, mastery, onAnswer, catFilter }) {
           style={{...baseBtn,background:"transparent",color:C.muted,padding:"8px 0",fontSize:13,width:"100%"}}>
           💡 ヒントを見る
         </button>
+      )}
+      {checked&&combo>=3&&(
+        <div className="pulse" style={{textAlign:"center",fontSize:18,fontWeight:700,color:C.gold,marginBottom:14}}>
+          {combo>=5?"On fire! 🔥🔥🔥":combo+" in a row! 🔥"}
+        </div>
       )}
       {checked!==null&&(
         <div className="fade-in" style={{padding:16,background:C.card,borderRadius:12,borderLeft:"3px solid "+(checked?C.ok:C.ng),marginBottom:16}}>
@@ -672,7 +732,7 @@ function Stars({ n }) {
   );
 }
 
-function ComposeMode() {
+function ComposeMode({ onSolved }) {
   const [sc, setSc] = useState(null);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
@@ -694,6 +754,8 @@ function ComposeMode() {
       const data = await res.json().catch(()=>({}));
       if(!res.ok) throw new Error(data.error || ("サーバーエラー ("+res.status+")"));
       setResult(data);
+      if(onSolved) onSolved();
+      if((data.rating||0)>=4) confetti(60,true);
     } catch(e) {
       setError(e.message || "通信に失敗しました。");
     } finally {
@@ -803,8 +865,50 @@ function App() {
   const [mode, setMode] = useState("quiz");
   const [mastery, setMastery] = useState(loadMastery);
   const [daily, setDaily] = useState(loadDaily);
+  const [streak, setStreak] = useState(loadStreak);
+  const [celebrate, setCelebrate] = useState(null);
   const [catFilter, setCatFilter] = useState("all");
   const masteryRef = useRef(mastery);
+  const dailyRef = useRef(daily);
+  const streakRef = useRef(streak);
+
+  // auto-dismiss celebration toast
+  useEffect(() => {
+    if (!celebrate) return;
+    const t = setTimeout(() => setCelebrate(null), 3500);
+    return () => clearTimeout(t);
+  }, [celebrate]);
+
+  // Called once per answered problem (Quiz/Type/Write). transition: {cur,next} or null.
+  const recordSolved = useCallback((transition) => {
+    const today = todayKey();
+    // streak — count once per day
+    const s = streakRef.current;
+    if (s.lastDate !== today) {
+      const newCount = (s.lastDate === yesterdayKey()) ? (s.count || 0) + 1 : 1;
+      const ns = { count: newCount, lastDate: today };
+      streakRef.current = ns; setStreak(ns); saveStreak(ns);
+      if ([3,7,14,30].indexOf(newCount) >= 0) {
+        const msgs = {3:"🔥 3日連続！習慣化スタート",7:"🔥 1週間連続！素晴らしい",14:"🔥 2週間連続！もう本物",30:"🔥 30日連続！圧巻です"};
+        setCelebrate(msgs[newCount]);
+        confetti(80, true);
+      }
+    }
+    // daily summary + goal
+    const base = dailyRef.current.date === today ? dailyRef.current : { date: today, solved:0, learned:0, mastered:0 };
+    const solved = base.solved + 1;
+    const nd = {
+      ...base,
+      solved,
+      learned: base.learned + (transition && transition.cur === 0 && transition.next > 0 ? 1 : 0),
+      mastered: base.mastered + (transition && transition.cur < 3 && transition.next >= 3 ? 1 : 0),
+    };
+    dailyRef.current = nd; setDaily(nd); saveDaily(nd);
+    if (base.solved < GOAL && solved >= GOAL) {
+      setCelebrate("🎯 今日の目標 達成！");
+      confetti(90, true);
+    }
+  }, []);
 
   const handleAnswer = useCallback((word, correct) => {
     const cur = masteryRef.current[word] || 0;
@@ -813,18 +917,10 @@ function App() {
     masteryRef.current = updated;
     setMastery(updated);
     saveMastery(updated);
-    setDaily(prev => {
-      const base = prev.date === todayKey() ? prev : { date: todayKey(), solved:0, learned:0, mastered:0 };
-      const nd = {
-        ...base,
-        solved: base.solved + 1,
-        learned: base.learned + (cur === 0 && next > 0 ? 1 : 0),
-        mastered: base.mastered + (cur < 3 && next >= 3 ? 1 : 0),
-      };
-      saveDaily(nd);
-      return nd;
-    });
-  }, []);
+    recordSolved({ cur, next });
+  }, [recordSolved]);
+
+  const handleCompose = useCallback(() => { recordSolved(null); }, [recordSolved]);
 
   const handleReset = () => {
     if(confirm("進捗をすべてリセットしますか？")){
@@ -845,13 +941,30 @@ function App() {
   const learningCount = VOCAB.filter(v=>{const m=mastery[v.w]||0;return m>0&&m<3;}).length;
   const masteredPct = masteredCount/total*100;
   const learningPct = learningCount/total*100;
+  const streakDays = effectiveStreak(streak);
+  const todaySolved = daily.date === todayKey() ? daily.solved : 0;
+  const goalDone = todaySolved >= GOAL;
 
   return (
     <div style={{minHeight:"100vh",background:C.bg,color:C.cream,maxWidth:480,margin:"0 auto"}}>
+      {/* Celebration toast */}
+      {celebrate&&(
+        <div className="pulse" style={{position:"fixed",top:16,left:"50%",transform:"translateX(-50%)",zIndex:9998,
+          background:C.plum,color:C.cream,padding:"12px 22px",borderRadius:999,fontSize:15,fontWeight:700,
+          boxShadow:"0 8px 28px rgba(0,0,0,0.45)",border:"1px solid "+C.dusty,whiteSpace:"nowrap"}}>
+          {celebrate}
+        </div>
+      )}
+
       {/* Header */}
       <div style={{padding:"20px 20px 12px",borderBottom:"1px solid "+C.bdr}}>
-        <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:22,fontWeight:700,letterSpacing:1}}>ORINAS English Drill</div>
-        <div style={{display:"flex",alignItems:"center",gap:12,marginTop:8}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:22,fontWeight:700,letterSpacing:1}}>ORINAS English Drill</div>
+          <div title="連続学習日数" style={{display:"flex",alignItems:"center",gap:4,background:C.card,padding:"4px 10px",borderRadius:999,fontSize:14,fontWeight:700,color:streakDays>0?C.gold:C.muted}}>
+            <span style={{fontSize:16,filter:streakDays>0?"none":"grayscale(1) opacity(0.6)"}}>🔥</span>{streakDays}
+          </div>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:12,marginTop:10}}>
           <div style={{flex:1,height:6,background:C.muted,borderRadius:3,overflow:"hidden",display:"flex"}}>
             <div style={{height:"100%",width:masteredPct+"%",background:C.ok,transition:"width 0.5s"}} />
             <div style={{height:"100%",width:learningPct+"%",background:C.gold,transition:"width 0.5s"}} />
@@ -861,6 +974,15 @@ function App() {
           <span><span style={{color:C.ok,fontWeight:700}}>習得済み {masteredCount}</span></span>
           <span><span style={{color:C.gold,fontWeight:700}}>学習中 {learningCount}</span></span>
           <span>全{total}語</span>
+        </div>
+        {/* Daily goal */}
+        <div style={{display:"flex",alignItems:"center",gap:10,marginTop:12,padding:"8px 12px",background:C.card,borderRadius:10}}>
+          <span style={{fontSize:13,color:goalDone?C.ok:C.lav,fontWeight:700,whiteSpace:"nowrap"}}>
+            {goalDone?"🎯 今日の目標 達成済み ✓":"🎯 今日の目標 "+Math.min(todaySolved,GOAL)+" / "+GOAL+"問"}
+          </span>
+          <div style={{flex:1,height:6,background:C.bg,borderRadius:3,overflow:"hidden"}}>
+            <div style={{height:"100%",width:Math.min(100,todaySolved/GOAL*100)+"%",background:goalDone?C.ok:C.dusty,transition:"width 0.4s"}} />
+          </div>
         </div>
       </div>
 
@@ -881,7 +1003,7 @@ function App() {
       <div style={{paddingBottom:80}}>
         {mode==="quiz"&&<QuizMode vocab={VOCAB} mastery={mastery} onAnswer={handleAnswer} catFilter={catFilter} />}
         {mode==="type"&&<TypeMode vocab={VOCAB} mastery={mastery} onAnswer={handleAnswer} catFilter={catFilter} />}
-        {mode==="compose"&&<ComposeMode />}
+        {mode==="compose"&&<ComposeMode onSolved={handleCompose} />}
         {mode==="stats"&&<StatsView vocab={VOCAB} mastery={mastery} daily={daily} onReset={handleReset} />}
       </div>
 
