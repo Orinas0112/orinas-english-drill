@@ -373,6 +373,66 @@ function clearSession(mode) {
   try { localStorage.removeItem('orinas-session-'+mode+'-v1'); } catch(e) {}
 }
 
+// ── XP & Level system ──
+const LEVELS = [
+  { n:"Intern",   xp:0    },
+  { n:"Staff",    xp:100  },
+  { n:"Senior",   xp:300  },
+  { n:"Lead",     xp:600  },
+  { n:"Manager",  xp:1000 },
+  { n:"Director", xp:1500 },
+  { n:"VP",       xp:2200 },
+  { n:"CBO",      xp:3000 },
+  { n:"COO",      xp:4000 },
+  { n:"CEO",      xp:5500 },
+];
+function loadXP() {
+  try { const r = localStorage.getItem('orinas-xp-v1'); return r ? (JSON.parse(r).xp || 0) : 0; }
+  catch(e) { return 0; }
+}
+function saveXP(xp) {
+  try { localStorage.setItem('orinas-xp-v1', JSON.stringify({ xp })); } catch(e) {}
+}
+function levelInfo(xp) {
+  let li = 0;
+  for (let i=0;i<LEVELS.length;i++) { if (xp >= LEVELS[i].xp) li = i; }
+  const cur = LEVELS[li];
+  const next = LEVELS[li+1] || null;
+  const into = xp - cur.xp;
+  const span = next ? next.xp - cur.xp : 1;
+  const pct = next ? Math.min(100, into / span * 100) : 100;
+  return { lvNum: li+1, name: cur.n, next, into, span, pct, xp };
+}
+
+// ── Learning calendar (per-day problem counts, keyed by date) ──
+function loadCalendar() {
+  try { const r = localStorage.getItem('orinas-cal-v1'); return r ? JSON.parse(r) : {}; }
+  catch(e) { return {}; }
+}
+function saveCalendar(c) {
+  try { localStorage.setItem('orinas-cal-v1', JSON.stringify(c)); } catch(e) {}
+}
+
+// ── Word of the day (one fixed word per day) ──
+function getWordOfTheDay(vocab, mastery) {
+  try {
+    const r = localStorage.getItem('orinas-wotd-v1');
+    if (r) {
+      const s = JSON.parse(r);
+      if (s && s.date === todayKey()) {
+        const v = vocab.find(x => x.w === s.word);
+        if (v) return v;
+      }
+    }
+  } catch(e) {}
+  // Prefer weak words (mastery 0-1); otherwise pick from the whole list.
+  const weak = vocab.filter(v => (mastery[v.w] || 0) <= 1);
+  const pool = weak.length ? weak : vocab;
+  const v = pool[Math.floor(Math.random() * pool.length)];
+  try { localStorage.setItem('orinas-wotd-v1', JSON.stringify({ date: todayKey(), word: v.w })); } catch(e) {}
+  return v;
+}
+
 // ═══════════════════ RESUME DIALOG ═══════════════════
 function ResumeDialog({ answered, total, onResume, onNew }) {
   return (
@@ -639,7 +699,7 @@ function TypeMode({ vocab, mastery, onAnswer, catFilter }) {
 }
 
 // ═══════════════════ STATS VIEW ═══════════════════
-function StatsView({ vocab, mastery, daily, onReset }) {
+function StatsView({ vocab, mastery, daily, calendar, onReset }) {
   const total=vocab.length;
   const mastered=vocab.filter(v=>(mastery[v.w]||0)>=3).length;
   const learning=vocab.filter(v=>{const m=mastery[v.w]||0;return m>0&&m<3;}).length;
@@ -647,6 +707,11 @@ function StatsView({ vocab, mastery, daily, onReset }) {
   const pct=Math.round((mastered/total)*100);
   const cats=["c","a","t"];
   const d = daily || { solved:0, learned:0, mastered:0 };
+  const cal = calendar || {};
+  // Last 30 days (oldest → newest)
+  const calDays = [];
+  for (let i=29;i>=0;i--) { const dt = new Date(); dt.setDate(dt.getDate()-i); calDays.push(dayKey(dt)); }
+  const heatColor = (n) => !n ? C.card : n<=5 ? "#46264A" : n<=15 ? "#7A3D6E" : "#B45FA0";
 
   const weak=vocab.filter(v=>{const m=mastery[v.w]||0;return m>0&&m<3;}).sort((a,b)=>(mastery[a.w]||0)-(mastery[b.w]||0)).slice(0,10);
 
@@ -668,6 +733,29 @@ function StatsView({ vocab, mastery, daily, onReset }) {
               <div style={{fontSize:11,color:C.muted,marginTop:2}}>{s.l}</div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Learning calendar (heatmap) */}
+      <div style={{marginBottom:24}}>
+        <div style={{fontSize:13,color:C.muted,marginBottom:10}}>学習カレンダー（過去30日）</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(10,1fr)",gap:5}}>
+          {calDays.map(dk=>{
+            const n=cal[dk]||0;
+            const isToday=dk===todayKey();
+            return (
+              <div key={dk} title={dk+"："+n+"問"}
+                style={{aspectRatio:"1",borderRadius:4,background:heatColor(n),
+                  border:isToday?"2px solid "+C.lav:"1px solid "+C.bdr}} />
+            );
+          })}
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:6,marginTop:10,fontSize:11,color:C.muted}}>
+          <span>少</span>
+          {[C.card,"#46264A","#7A3D6E","#B45FA0"].map((c,i)=>(
+            <div key={i} style={{width:12,height:12,borderRadius:3,background:c,border:"1px solid "+C.bdr}} />
+          ))}
+          <span>多</span>
         </div>
       </div>
 
@@ -866,11 +954,18 @@ function App() {
   const [mastery, setMastery] = useState(loadMastery);
   const [daily, setDaily] = useState(loadDaily);
   const [streak, setStreak] = useState(loadStreak);
+  const [xp, setXp] = useState(loadXP);
+  const [calendar, setCalendar] = useState(loadCalendar);
   const [celebrate, setCelebrate] = useState(null);
+  const [levelUp, setLevelUp] = useState(null);
+  const [showWotd, setShowWotd] = useState(true);
+  const [wotd] = useState(() => getWordOfTheDay(VOCAB, loadMastery()));
   const [catFilter, setCatFilter] = useState("all");
   const masteryRef = useRef(mastery);
   const dailyRef = useRef(daily);
   const streakRef = useRef(streak);
+  const xpRef = useRef(xp);
+  const calRef = useRef(calendar);
 
   // auto-dismiss celebration toast
   useEffect(() => {
@@ -878,6 +973,28 @@ function App() {
     const t = setTimeout(() => setCelebrate(null), 3500);
     return () => clearTimeout(t);
   }, [celebrate]);
+
+  // auto-dismiss level-up overlay
+  useEffect(() => {
+    if (!levelUp) return;
+    const t = setTimeout(() => setLevelUp(null), 4200);
+    return () => clearTimeout(t);
+  }, [levelUp]);
+
+  // Award XP and detect level-up.
+  const addXp = useCallback((amount) => {
+    if (!amount) return;
+    const before = xpRef.current;
+    const after = before + amount;
+    const lvBefore = levelInfo(before).lvNum;
+    const lvAfter = levelInfo(after).lvNum;
+    xpRef.current = after; setXp(after); saveXP(after);
+    if (lvAfter > lvBefore) {
+      const info = levelInfo(after);
+      setLevelUp({ name: info.name, lvNum: info.lvNum });
+      confetti(120, true);
+    }
+  }, []);
 
   // Called once per answered problem (Quiz/Type/Write). transition: {cur,next} or null.
   const recordSolved = useCallback((transition) => {
@@ -904,13 +1021,17 @@ function App() {
       mastered: base.mastered + (transition && transition.cur < 3 && transition.next >= 3 ? 1 : 0),
     };
     dailyRef.current = nd; setDaily(nd); saveDaily(nd);
+    // calendar — per-day problem count
+    const cal = { ...calRef.current };
+    cal[today] = (cal[today] || 0) + 1;
+    calRef.current = cal; setCalendar(cal); saveCalendar(cal);
     if (base.solved < GOAL && solved >= GOAL) {
       setCelebrate("🎯 今日の目標 達成！");
       confetti(90, true);
     }
   }, []);
 
-  const handleAnswer = useCallback((word, correct) => {
+  const handleAnswer = useCallback((word, correct, xpGain) => {
     const cur = masteryRef.current[word] || 0;
     const next = correct ? Math.min(cur+1, 3) : Math.max(cur-1, 0);
     const updated = { ...masteryRef.current, [word]: next };
@@ -918,9 +1039,13 @@ function App() {
     setMastery(updated);
     saveMastery(updated);
     recordSolved({ cur, next });
-  }, [recordSolved]);
+    if (correct) addXp(xpGain || 0);
+  }, [recordSolved, addXp]);
 
-  const handleCompose = useCallback(() => { recordSolved(null); }, [recordSolved]);
+  const handleQuizAnswer = useCallback((word, correct) => handleAnswer(word, correct, 10), [handleAnswer]);
+  const handleTypeAnswer = useCallback((word, correct) => handleAnswer(word, correct, 15), [handleAnswer]);
+
+  const handleCompose = useCallback(() => { recordSolved(null); addXp(30); }, [recordSolved, addXp]);
 
   const handleReset = () => {
     if(confirm("進捗をすべてリセットしますか？")){
@@ -944,9 +1069,44 @@ function App() {
   const streakDays = effectiveStreak(streak);
   const todaySolved = daily.date === todayKey() ? daily.solved : 0;
   const goalDone = todaySolved >= GOAL;
+  const lv = levelInfo(xp);
 
   return (
     <div style={{minHeight:"100vh",background:C.bg,color:C.cream,maxWidth:480,margin:"0 auto"}}>
+      {/* Word of the day (launch modal) */}
+      {showWotd&&wotd&&(
+        <div style={{position:"fixed",inset:0,zIndex:9996,background:"rgba(17,10,20,0.92)",
+          display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+          <div className="fade-in" style={{maxWidth:380,width:"100%",background:C.card,borderRadius:20,
+            padding:"32px 24px",textAlign:"center",border:"1px solid "+C.bdr,boxShadow:"0 20px 60px rgba(0,0,0,0.5)"}}>
+            <div style={{fontSize:12,letterSpacing:3,color:C.muted,marginBottom:14}}>今日の一語 · WORD OF THE DAY</div>
+            <span style={{background:CAT_C[wotd.c],color:"white",padding:"3px 12px",borderRadius:20,fontSize:12}}>{CAT_L[wotd.c]}</span>
+            <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:34,fontWeight:700,color:C.lilac,margin:"18px 0 8px",lineHeight:1.2}}>{wotd.w}</div>
+            <div style={{fontSize:16,color:C.cream,marginBottom:18}}>{wotd.m}</div>
+            <div style={{padding:"14px 16px",background:C.bg,borderRadius:12,borderLeft:"3px solid "+C.lav,textAlign:"left",marginBottom:24}}>
+              <div style={{fontSize:12,color:C.muted,marginBottom:4}}>例文</div>
+              <div style={{fontSize:15,fontStyle:"italic",lineHeight:1.6,color:C.lilac}}>{wotd.e}</div>
+            </div>
+            <button onClick={()=>setShowWotd(false)}
+              style={{...baseBtn,background:C.plum,color:C.cream,padding:"14px 0",fontSize:15,width:"100%"}}>学習を始める →</button>
+          </div>
+        </div>
+      )}
+
+      {/* Level-up overlay */}
+      {levelUp&&(
+        <div onClick={()=>setLevelUp(null)} style={{position:"fixed",inset:0,zIndex:9997,
+          background:"rgba(17,10,20,0.85)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+          <div className="pulse" style={{textAlign:"center"}}>
+            <div style={{fontSize:64,marginBottom:8}}>🎖️</div>
+            <div style={{fontSize:16,color:C.gold,fontWeight:700,letterSpacing:3,marginBottom:8}}>LEVEL UP!</div>
+            <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:34,fontWeight:700,color:C.cream}}>→ {levelUp.name}</div>
+            <div style={{fontSize:14,color:C.muted,marginTop:10}}>Lv{levelUp.lvNum} に昇格しました</div>
+            <div style={{fontSize:12,color:C.muted,marginTop:26}}>タップして閉じる</div>
+          </div>
+        </div>
+      )}
+
       {/* Celebration toast */}
       {celebrate&&(
         <div className="pulse" style={{position:"fixed",top:16,left:"50%",transform:"translateX(-50%)",zIndex:9998,
@@ -984,6 +1144,20 @@ function App() {
             <div style={{height:"100%",width:Math.min(100,todaySolved/GOAL*100)+"%",background:goalDone?C.ok:C.dusty,transition:"width 0.4s"}} />
           </div>
         </div>
+        {/* Level & XP */}
+        <div style={{marginTop:12}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:4}}>
+            <span style={{fontSize:13,fontWeight:700,color:C.lav}}>
+              <span style={{color:C.gold}}>Lv{lv.lvNum}</span> {lv.name}
+            </span>
+            <span style={{fontSize:11,color:C.muted}}>
+              {lv.next ? (lv.into+" / "+lv.span+" XP → "+lv.next.n) : (lv.xp+" XP · MAX")}
+            </span>
+          </div>
+          <div style={{height:6,background:C.card,borderRadius:3,overflow:"hidden"}}>
+            <div style={{height:"100%",width:lv.pct+"%",background:"linear-gradient(90deg,"+C.dusty+","+C.gold+")",transition:"width 0.5s"}} />
+          </div>
+        </div>
       </div>
 
       {/* Category Filter */}
@@ -1001,10 +1175,10 @@ function App() {
 
       {/* Content */}
       <div style={{paddingBottom:80}}>
-        {mode==="quiz"&&<QuizMode vocab={VOCAB} mastery={mastery} onAnswer={handleAnswer} catFilter={catFilter} />}
-        {mode==="type"&&<TypeMode vocab={VOCAB} mastery={mastery} onAnswer={handleAnswer} catFilter={catFilter} />}
+        {mode==="quiz"&&<QuizMode vocab={VOCAB} mastery={mastery} onAnswer={handleQuizAnswer} catFilter={catFilter} />}
+        {mode==="type"&&<TypeMode vocab={VOCAB} mastery={mastery} onAnswer={handleTypeAnswer} catFilter={catFilter} />}
         {mode==="compose"&&<ComposeMode onSolved={handleCompose} />}
-        {mode==="stats"&&<StatsView vocab={VOCAB} mastery={mastery} daily={daily} onReset={handleReset} />}
+        {mode==="stats"&&<StatsView vocab={VOCAB} mastery={mastery} daily={daily} calendar={calendar} onReset={handleReset} />}
       </div>
 
       {/* Bottom Nav */}
