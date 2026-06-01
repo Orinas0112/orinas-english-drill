@@ -232,6 +232,22 @@ I misjudged|判断を誤った|I misjudged the timeline.|t`.trim().split('\n').m
   return { w:p[0], m:p[1], e:p[2], c:p[3] };
 });
 
+// ═══════════════════ COMPOSE SCENARIOS ═══════════════════
+const SCENARIOS = [
+  { id:1,  cat:"c", t:"方向性のすり合わせ", s:"新しい施策を進める前に、チームで認識を合わせたい。会議の冒頭で、合意してから計画を固めようと提案する。", words:["align","lock in"] },
+  { id:2,  cat:"c", t:"問題のエスカレーション", s:"クライアントから懸念が上がってきた。気づいた点を共有し、必要なら上長を巻き込んで上に上げたい。", words:["flag","escalate","loop in"] },
+  { id:3,  cat:"c", t:"優先順位の指示", s:"メンバーが複数の案件を抱えて手一杯。何を優先し、何を後回しにするか方針を伝える。", words:["prioritize","deprioritize","that said"] },
+  { id:4,  cat:"a", t:"権限委譲", s:"有望なPMに案件をまるごと任せたい。主体的に担ってもらえるよう、裁量を渡すことを伝える。", words:["delegate","empower","own"] },
+  { id:5,  cat:"c", t:"1on1でのフォロー", s:"先週の議論の続き。今は一旦置いて後で戻り、進捗を随時共有してほしいと伝える。", words:["circle back","follow up","keep me posted"] },
+  { id:6,  cat:"t", t:"成果不足の指摘", s:"あるメンバーの成果が不安定で、締切遅れが続いている。事実ベースで指摘し、改善計画を立てたい。", words:["underperforming","a pattern","improvement plan"] },
+  { id:7,  cat:"t", t:"厳しいフィードバック", s:"現状の品質は基準に届いていない。譲れない点を明確にし、具体的な改善手順を求める。", words:["not meeting the bar","non-negotiable","concrete steps"] },
+  { id:8,  cat:"t", t:"契約非更新の通知", s:"残念ながら契約を更新しない判断に至った。円満に別の道へ進めるよう、退職手当も含めて伝える。", words:["non-renewal","part ways","severance"] },
+  { id:9,  cat:"t", t:"謝罪と責任", s:"自分の見落としでトラブルが起きた。言い訳せず、全責任を認めて謝る。", words:["that's on me","I take full responsibility","my oversight"] },
+  { id:10, cat:"t", t:"対立の仲裁", s:"二人のメンバーが衝突している。間に入り、共通点を探り、わだかまりを解消したい。", words:["mediate","find common ground","clear the air"] },
+  { id:11, cat:"a", t:"戦略の方向転換", s:"今の施策は本質的な変化を生んでいない。トレードオフを認識した上で方向転換を提案する。", words:["pivot","move the needle","trade-off"] },
+  { id:12, cat:"a", t:"オンボーディング計画", s:"新メンバーを受け入れる。早く戦力化できるよう、立ち上がりと状況把握の計画を伝える。", words:["onboard","ramp up","get up to speed"] },
+];
+
 // ═══════════════════ UTILS ═══════════════════
 const shuffle = a => { const b=[...a]; for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];} return b; };
 const norm = s => s.toLowerCase().replace(/[^a-z0-9 ]/g,"").replace(/\s+/g," ").trim();
@@ -536,6 +552,143 @@ function StatsView({ vocab, mastery, onReset }) {
   );
 }
 
+// ═══════════════════ COMPOSE MODE ═══════════════════
+function Stars({ n }) {
+  return (
+    <span style={{fontSize:24,letterSpacing:3}}>
+      {[1,2,3,4,5].map(i=>(
+        <span key={i} style={{color:i<=n?C.gold:C.bdr}}>★</span>
+      ))}
+    </span>
+  );
+}
+
+function ComposeMode() {
+  const [sc, setSc] = useState(null);
+  const [text, setText] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+
+  const wordInfo = w => VOCAB.find(v=>v.w===w) || { w, m:"" };
+  const reset = () => { setText(""); setResult(null); setError(null); };
+
+  const submit = async () => {
+    if(!text.trim()||loading) return;
+    setLoading(true); setError(null); setResult(null);
+    try {
+      const res = await fetch("/api/evaluate", {
+        method:"POST",
+        headers:{"content-type":"application/json"},
+        body: JSON.stringify({ scenario: sc.t+" — "+sc.s, words: sc.words, text }),
+      });
+      const data = await res.json().catch(()=>({}));
+      if(!res.ok) throw new Error(data.error || ("サーバーエラー ("+res.status+")"));
+      setResult(data);
+    } catch(e) {
+      setError(e.message || "通信に失敗しました。");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── Scenario list ──
+  if(!sc) {
+    return (
+      <div className="fade-in" style={{padding:"16px 20px"}}>
+        <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:700,marginBottom:6}}>Compose</div>
+        <div style={{color:C.muted,fontSize:13,marginBottom:18,lineHeight:1.6}}>シナリオを1つ選び、指定の単語をすべて使って英作文しましょう。AIが添削します。</div>
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {SCENARIOS.map(s=>(
+            <button key={s.id} onClick={()=>{setSc(s);reset();}}
+              style={{...baseBtn,background:C.card,border:"1px solid "+C.bdr,padding:"14px 16px",textAlign:"left",width:"100%"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                <span style={{color:C.cream,fontWeight:600,fontSize:15}}>{s.t}</span>
+                <span style={{background:CAT_C[s.cat],color:"white",padding:"2px 8px",borderRadius:20,fontSize:11}}>{CAT_L[s.cat]}</span>
+              </div>
+              <div style={{color:C.muted,fontSize:12,lineHeight:1.5,marginBottom:8}}>{s.s}</div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {s.words.map(w=>(
+                  <span key={w} style={{background:C.cardH,color:C.lav,padding:"2px 8px",borderRadius:6,fontSize:12}}>{w}</span>
+                ))}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Compose / result ──
+  const canSend = text.trim() && !loading;
+  return (
+    <div className="fade-in" style={{padding:"16px 20px"}}>
+      <button onClick={()=>{setSc(null);reset();}}
+        style={{...baseBtn,background:"transparent",color:C.muted,padding:"4px 0",fontSize:13,marginBottom:12}}>← シナリオ一覧</button>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+        <span style={{color:C.cream,fontWeight:600,fontSize:16}}>{sc.t}</span>
+        <span style={{background:CAT_C[sc.cat],color:"white",padding:"2px 8px",borderRadius:20,fontSize:11}}>{CAT_L[sc.cat]}</span>
+      </div>
+      <div style={{color:C.lilac,fontSize:13,lineHeight:1.6,marginBottom:14,padding:"12px 14px",background:C.card,borderRadius:10}}>{sc.s}</div>
+      <div style={{fontSize:12,color:C.muted,marginBottom:8}}>次の単語・表現をすべて使ってください:</div>
+      <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
+        {sc.words.map(w=>{const info=wordInfo(w);return(
+          <div key={w} style={{display:"flex",gap:8,alignItems:"baseline",padding:"6px 10px",background:C.card,borderRadius:8}}>
+            <span style={{color:C.lav,fontWeight:600,fontSize:14}}>{info.w}</span>
+            <span style={{color:C.muted,fontSize:12}}>{info.m}</span>
+          </div>
+        );})}
+      </div>
+      <textarea value={text} onChange={e=>setText(e.target.value)} disabled={loading}
+        placeholder="ここに英文を書いてください..." rows={5}
+        style={{width:"100%",padding:"14px 16px",borderRadius:12,border:"1.5px solid "+C.bdr,
+          background:C.card,color:C.cream,fontSize:15,outline:"none",resize:"vertical",lineHeight:1.6}} />
+      <button onClick={submit} disabled={!canSend}
+        style={{...baseBtn,background:canSend?C.plum:C.card,color:C.cream,padding:"14px 0",fontSize:15,width:"100%",marginTop:12,opacity:canSend?1:0.5}}>
+        {loading?"添削中…":"添削してもらう"}
+      </button>
+      {error&&(
+        <div className="fade-in" style={{marginTop:16,padding:14,background:"rgba(232,112,112,0.12)",border:"1px solid "+C.ng,borderRadius:10,fontSize:13,color:C.ng,lineHeight:1.6}}>
+          {error}
+        </div>
+      )}
+      {result&&(
+        <div className="fade-in" style={{marginTop:20,display:"flex",flexDirection:"column",gap:14}}>
+          <div style={{textAlign:"center",padding:16,background:C.card,borderRadius:12}}>
+            <Stars n={result.rating||0} />
+            <div style={{color:C.muted,fontSize:13,marginTop:6}}>{(result.rating||0)} / 5</div>
+            {result.comment&&<div style={{fontSize:14,lineHeight:1.6,marginTop:10}}>{result.comment}</div>}
+          </div>
+          {Array.isArray(result.vocabCheck)&&result.vocabCheck.length>0&&(
+            <div style={{padding:16,background:C.card,borderRadius:12}}>
+              <div style={{fontSize:13,color:C.muted,marginBottom:10}}>語彙チェック</div>
+              {result.vocabCheck.map((vc,i)=>{const ok=vc.used&&vc.correct;return(
+                <div key={i} style={{marginBottom:8,fontSize:14,lineHeight:1.5}}>
+                  <span style={{color:ok?C.ok:C.ng,marginRight:6}}>{ok?"✓":"✗"}</span>
+                  <span style={{color:C.lav,fontWeight:600}}>{vc.word}</span>
+                  {vc.note&&<span style={{color:C.muted}}> — {vc.note}</span>}
+                </div>
+              );})}
+            </div>
+          )}
+          {[{label:"文法",val:result.grammar},{label:"自然さ",val:result.naturalness}].map(sec=>sec.val&&(
+            <div key={sec.label} style={{padding:16,background:C.card,borderRadius:12}}>
+              <div style={{fontSize:13,color:C.muted,marginBottom:6}}>{sec.label}</div>
+              <div style={{fontSize:14,lineHeight:1.6}}>{sec.val}</div>
+            </div>
+          ))}
+          {result.improved&&(
+            <div style={{padding:16,background:C.card,borderRadius:12,borderLeft:"3px solid "+C.lav}}>
+              <div style={{fontSize:13,color:C.muted,marginBottom:6}}>改善例</div>
+              <div style={{fontSize:15,fontStyle:"italic",lineHeight:1.6,color:C.lilac}}>{result.improved}</div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ═══════════════════ MAIN APP ═══════════════════
 function App() {
   const [mode, setMode] = useState("quiz");
@@ -562,6 +715,7 @@ function App() {
   const tabs = [
     {id:"quiz",icon:"🎯",label:"Quiz"},
     {id:"type",icon:"✍️",label:"Type"},
+    {id:"compose",icon:"✏️",label:"Compose"},
     {id:"stats",icon:"📊",label:"Stats"},
   ];
   const masteredCount = VOCAB.filter(v=>(mastery[v.w]||0)>=3).length;
@@ -596,6 +750,7 @@ function App() {
       <div style={{paddingBottom:80}}>
         {mode==="quiz"&&<QuizMode vocab={VOCAB} mastery={mastery} onAnswer={handleAnswer} catFilter={catFilter} />}
         {mode==="type"&&<TypeMode vocab={VOCAB} mastery={mastery} onAnswer={handleAnswer} catFilter={catFilter} />}
+        {mode==="compose"&&<ComposeMode />}
         {mode==="stats"&&<StatsView vocab={VOCAB} mastery={mastery} onReset={handleReset} />}
       </div>
 
