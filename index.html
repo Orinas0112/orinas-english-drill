@@ -52,6 +52,42 @@
   .spk { animation: spkPulse 0.7s ease-in-out infinite; }
   @keyframes achPop { 0% { transform:scale(0.6) translateY(20px); opacity:0; } 60% { transform:scale(1.05) translateY(0); opacity:1; } 100% { transform:scale(1) translateY(0); opacity:1; } }
   .ach-pop { animation: achPop 0.5s cubic-bezier(.2,.7,.3,1) both; }
+  /* ── F: visual richness ── */
+  @keyframes shimmer { 0% { background-position:-150% 0; } 100% { background-position:250% 0; } }
+  @keyframes floatP {
+    0% { transform:translateY(0) translateX(0) scale(0.8); opacity:0; }
+    12% { opacity:0.2; }
+    50% { opacity:0.22; }
+    88% { opacity:0.12; }
+    100% { transform:translateY(-140px) translateX(24px) scale(1.1); opacity:0; }
+  }
+  @keyframes modalPop { 0% { transform:scale(0.9); opacity:0; } 100% { transform:scale(1); opacity:1; } }
+  @keyframes slideQ { 0% { transform:translateX(34px); opacity:0; } 100% { transform:translateX(0); opacity:1; } }
+  @keyframes tabIn { 0% { transform:translateY(12px); opacity:0; } 100% { transform:translateY(0); opacity:1; } }
+  .glass { backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
+  .shimmer { position:relative; overflow:hidden; }
+  .shimmer::after { content:""; position:absolute; inset:0; border-radius:inherit;
+    background:linear-gradient(100deg,transparent 25%,rgba(255,255,255,0.5) 50%,transparent 75%);
+    background-size:200% 100%; animation:shimmer 2.8s linear infinite; pointer-events:none; }
+  .particle { position:absolute; border-radius:50%;
+    background:radial-gradient(circle, rgba(201,169,197,0.55), rgba(201,169,197,0));
+    pointer-events:none; animation:floatP linear infinite; will-change:transform,opacity; }
+  .modal-pop { animation: modalPop 0.32s cubic-bezier(.2,.7,.3,1); }
+  .q-anim { animation: slideQ 0.32s cubic-bezier(.2,.7,.3,1); }
+  .tab-anim { animation: tabIn 0.32s ease-out; }
+  .txt-glow { text-shadow:0 0 10px rgba(201,169,197,0.45); }
+  .choice-btn { transition: all 0.18s ease; }
+  .choice-btn:hover:not(:disabled) { border-color:#8E5687 !important;
+    box-shadow:0 0 0 1px rgba(142,86,135,0.5), 0 0 14px rgba(201,169,197,0.4); transform:translateY(-1px); }
+  .main-btn { transition: filter 0.18s ease, transform 0.08s ease, box-shadow 0.18s ease; }
+  .main-btn:hover { filter:brightness(1.12); box-shadow:0 6px 20px rgba(92,46,80,0.45); }
+  .main-btn:active { transform:scale(0.97); }
+  .cell-wrap { position:relative; }
+  .cell-tip { position:absolute; bottom:135%; left:50%; transform:translateX(-50%) scale(0.85);
+    background:#1A0E20; color:#F5F0F3; padding:4px 9px; border-radius:7px; font-size:10px; white-space:nowrap;
+    opacity:0; pointer-events:none; transition:all 0.15s ease; z-index:60; box-shadow:0 6px 16px rgba(0,0,0,0.45);
+    border:1px solid rgba(201,169,197,0.25); }
+  .cell-wrap:hover .cell-tip { opacity:1; transform:translateX(-50%) scale(1); }
 </style>
 </head>
 <body>
@@ -68,6 +104,10 @@ const DARK = {
   lav:"#C9A9C5", lilac:"#E8D5E4", cream:"#F5F0F3",
   muted:"#7B6883", ok:"#6ECB73", ng:"#E87070",
   gold:"#F0C850", bdr:"#3A2840",
+  bgGrad:"linear-gradient(180deg,#110A14 0%,#1A0E20 100%)",
+  glassTop:"rgba(255,255,255,0.12)", glassShadow:"0 6px 22px rgba(0,0,0,0.34)",
+  cardGlass:"rgba(42,24,48,0.58)",
+  btnGrad:"linear-gradient(135deg,#5C2E50 0%,#8E5687 100%)",
 };
 const LIGHT = {
   bg:"#FAFAFA", card:"#FFFFFF", cardH:"#F1EAF1",
@@ -75,6 +115,10 @@ const LIGHT = {
   lav:"#7A4A72", lilac:"#5C2E50", cream:"#2C2C2C",
   muted:"#8A7D88", ok:"#2E9E3A", ng:"#D2433F",
   gold:"#B5851A", bdr:"#E4DCE4",
+  bgGrad:"linear-gradient(180deg,#FAFAFA 0%,#F3EDF9 100%)",
+  glassTop:"rgba(255,255,255,0.85)", glassShadow:"0 6px 20px rgba(92,46,80,0.10)",
+  cardGlass:"rgba(255,255,255,0.62)",
+  btnGrad:"linear-gradient(135deg,#5C2E50 0%,#8E5687 100%)",
 };
 // Mutable active palette. Reassigned by applyTheme() before each render.
 let C = DARK;
@@ -101,6 +145,56 @@ const CAT_C = {
   em:"#8595C9", bg:"#B6C24F",
 };
 const baseBtn = { border:"none", borderRadius:12, cursor:"pointer", fontFamily:"'Noto Sans JP',sans-serif", transition:"all 0.2s" };
+// Glassmorphism card style — reads the live palette C. Apply with className="glass".
+function glassSx(radius, extra) {
+  return {
+    background: C.cardGlass,
+    borderRadius: radius || 14,
+    border: "1px solid "+C.bdr,
+    borderTop: "1px solid "+C.glassTop,
+    boxShadow: C.glassShadow,
+    ...(extra || {}),
+  };
+}
+// Animated count-up number. requestAnimationFrame is fine here (only particles must avoid it).
+function CountUp({ value, dur, className, style }) {
+  const [disp, setDisp] = useState(value);
+  const fromRef = useRef(value);
+  useEffect(() => {
+    const from = fromRef.current, to = value, d = dur || 650;
+    if (from === to) { setDisp(to); return; }
+    let raf; const start = performance.now();
+    const tick = (now) => {
+      const p = Math.min(1, (now - start) / d);
+      const e = 1 - Math.pow(1 - p, 3);
+      setDisp(Math.round(from + (to - from) * e));
+      if (p < 1) raf = requestAnimationFrame(tick); else fromRef.current = to;
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return <span className={className} style={style}>{disp}</span>;
+}
+// Ambient floating light particles (pure CSS animation, no JS loop).
+const PARTICLES = [
+  { l:"8%",  s:46, d:"0s",   dur:"15s" },
+  { l:"24%", s:28, d:"4s",   dur:"19s" },
+  { l:"42%", s:60, d:"8s",   dur:"17s" },
+  { l:"58%", s:22, d:"2s",   dur:"21s" },
+  { l:"73%", s:38, d:"6s",   dur:"16s" },
+  { l:"88%", s:30, d:"10s",  dur:"20s" },
+  { l:"50%", s:18, d:"13s",  dur:"23s" },
+];
+function Ambient() {
+  return (
+    <div style={{position:"fixed",inset:0,overflow:"hidden",pointerEvents:"none",zIndex:0}}>
+      {PARTICLES.map((p,i)=>(
+        <div key={i} className="particle" style={{left:p.l,bottom:"-60px",width:p.s,height:p.s,
+          animationDelay:p.d,animationDuration:p.dur}} />
+      ))}
+    </div>
+  );
+}
 
 // ═══════════════════ VOCAB DATA ═══════════════════
 const VOCAB = `align|認識を合わせる|Let's align on this before we lock it in.|c
@@ -835,7 +929,7 @@ function ResumeDialog({ answered, total, onResume, onNew }) {
       <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:20,fontWeight:700,marginBottom:8}}>前回の続きがあります</div>
       <div style={{color:C.muted,fontSize:14,marginBottom:28}}>{answered} / {total} 問まで進んでいます。<br/>続きから再開しますか？</div>
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
-        <button onClick={onResume} style={{...baseBtn,background:C.plum,color:ON_ACCENT,padding:"14px 0",fontSize:15,width:"100%"}}>続きから再開</button>
+        <button onClick={onResume} className="main-btn" style={{...baseBtn,background:C.btnGrad,color:ON_ACCENT,padding:"14px 0",fontSize:15,width:"100%"}}>続きから再開</button>
         <button onClick={onNew} style={{...baseBtn,background:"transparent",border:"1px solid "+C.bdr,color:C.muted,padding:"12px 0",fontSize:14,width:"100%"}}>新しく始める</button>
       </div>
     </div>
@@ -890,9 +984,9 @@ function QuizMode({ vocab, mastery, onAnswer, onCombo, onPerfect, catFilter }) {
           <div className="lv-bounce" style={{display:"inline-block",background:"linear-gradient(90deg,"+C.dusty+","+C.gold+")",
             color:"#1A0E1E",fontWeight:700,fontSize:16,padding:"6px 18px",borderRadius:999,marginBottom:12,letterSpacing:1}}>Perfect! 💎</div>
         )}
-        <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:32,fontWeight:700,marginBottom:8}}>{correct} / {results.length}</div>
+        <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:32,fontWeight:700,marginBottom:8}}><CountUp value={correct} dur={800} /> / {results.length}</div>
         <div style={{color:C.muted,marginBottom:32}}>{perfect?"全問正解！圧巻です":correct>=8?"Excellent!":correct>=5?"Good progress!":"Keep practicing!"}</div>
-        <button onClick={initNew} style={{...baseBtn,background:C.plum,color:ON_ACCENT,padding:"14px 32px",fontSize:16}}>Next Round →</button>
+        <button onClick={initNew} className="main-btn" style={{...baseBtn,background:C.btnGrad,color:ON_ACCENT,padding:"14px 32px",fontSize:16}}>Next Round →</button>
       </div>
     );
   }
@@ -901,7 +995,7 @@ function QuizMode({ vocab, mastery, onAnswer, onCombo, onPerfect, catFilter }) {
   const isCorrect = selected !== null ? selected === q.word.w : null;
 
   return (
-    <div className="fade-in" style={{padding:"16px 20px"}}>
+    <div key={idx} className="q-anim" style={{padding:"16px 20px"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
         <span style={{color:C.muted,fontSize:14}}>{idx+1} / {questions.length}</span>
         <span style={{background:CAT_C[q.word.c],color:"white",padding:"3px 10px",borderRadius:20,fontSize:12}}>{CAT_L[q.word.c]}</span>
@@ -923,7 +1017,7 @@ function QuizMode({ vocab, mastery, onAnswer, onCombo, onPerfect, catFilter }) {
           }
           return (
             <button key={ch.w} disabled={selected!==null}
-              className={selected!==null&&isThis?(isCorrect?"pulse":"shake"):""}
+              className={"choice-btn "+(selected!==null&&isThis?(isCorrect?"pulse":"shake"):"")}
               onClick={()=>{
                 setSelected(ch.w);
                 const ok=ch.w===q.word.w;
@@ -957,7 +1051,7 @@ function QuizMode({ vocab, mastery, onAnswer, onCombo, onPerfect, catFilter }) {
       {selected!==null&&(
         <div style={{textAlign:"center",marginTop:20}}>
           <button onClick={()=>{if(idx<questions.length-1){setIdx(idx+1);setSelected(null);}else{clearSession('quiz');if(onPerfect&&results.length>=10&&results.every(Boolean))onPerfect();setDone(true);}}}
-            style={{...baseBtn,background:C.plum,color:ON_ACCENT,padding:"12px 28px",fontSize:15}}>
+            className="main-btn" style={{...baseBtn,background:C.btnGrad,color:ON_ACCENT,padding:"12px 28px",fontSize:15}}>
             {idx<questions.length-1?"Next →":"Results →"}
           </button>
         </div>
@@ -1014,7 +1108,7 @@ function TypeMode({ vocab, mastery, onAnswer, onCombo, onPerfect, catFilter }) {
           <div className="lv-bounce" style={{display:"inline-block",background:"linear-gradient(90deg,"+C.dusty+","+C.gold+")",
             color:"#1A0E1E",fontWeight:700,fontSize:16,padding:"6px 18px",borderRadius:999,marginBottom:12,letterSpacing:1}}>Perfect! 💎</div>
         )}
-        <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:32,fontWeight:700,marginBottom:8}}>{correct}/{results.length}</div>
+        <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:32,fontWeight:700,marginBottom:8}}><CountUp value={correct} dur={800} />/{results.length}</div>
         {missed.length>0&&(
           <div style={{marginTop:20,textAlign:"left"}}>
             <div style={{color:C.muted,fontSize:13,marginBottom:10}}>復習が必要な単語：</div>
@@ -1026,7 +1120,7 @@ function TypeMode({ vocab, mastery, onAnswer, onCombo, onPerfect, catFilter }) {
             ))}
           </div>
         )}
-        <button onClick={initNew} style={{...baseBtn,background:C.plum,color:ON_ACCENT,padding:"14px 32px",fontSize:16,marginTop:24}}>Next Round →</button>
+        <button onClick={initNew} className="main-btn" style={{...baseBtn,background:C.btnGrad,color:ON_ACCENT,padding:"14px 32px",fontSize:16,marginTop:24}}>Next Round →</button>
       </div>
     );
   }
@@ -1046,7 +1140,7 @@ function TypeMode({ vocab, mastery, onAnswer, onCombo, onPerfect, catFilter }) {
   };
 
   return (
-    <div className="fade-in" style={{padding:"16px 20px"}}>
+    <div key={idx} className="q-anim" style={{padding:"16px 20px"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
         <span style={{color:C.muted,fontSize:14}}>{idx+1}/{questions.length}</span>
         <span style={{background:CAT_C[q.c],color:"white",padding:"3px 10px",borderRadius:20,fontSize:12}}>{CAT_L[q.c]}</span>
@@ -1067,8 +1161,8 @@ function TypeMode({ vocab, mastery, onAnswer, onCombo, onPerfect, catFilter }) {
           style={{flex:1,padding:"14px 16px",borderRadius:12,border:"1.5px solid "+(checked===null?C.bdr:checked?C.ok:C.ng),
             background:C.card,color:C.cream,fontSize:16,outline:"none"}} />
         {checked===null&&(
-          <button onClick={doCheck} disabled={!input.trim()}
-            style={{...baseBtn,background:input.trim()?C.plum:C.card,color:input.trim()?ON_ACCENT:C.muted,padding:"14px 18px",fontSize:15,opacity:input.trim()?1:0.5}}>✓</button>
+          <button onClick={doCheck} disabled={!input.trim()} className="main-btn"
+            style={{...baseBtn,background:input.trim()?C.btnGrad:C.card,color:input.trim()?ON_ACCENT:C.muted,padding:"14px 18px",fontSize:15,opacity:input.trim()?1:0.5}}>✓</button>
         )}
       </div>
       {checked===null&&(
@@ -1099,7 +1193,7 @@ function TypeMode({ vocab, mastery, onAnswer, onCombo, onPerfect, catFilter }) {
       {checked!==null&&(
         <div style={{textAlign:"center"}}>
           <button onClick={()=>{if(idx<questions.length-1){setIdx(idx+1);setInput("");setChecked(null);setHintLv(0);}else{clearSession('type');if(onPerfect&&results.length>=10&&results.every(Boolean))onPerfect();setDone(true);}}}
-            style={{...baseBtn,background:C.plum,color:ON_ACCENT,padding:"12px 28px",fontSize:15}}>
+            className="main-btn" style={{...baseBtn,background:C.btnGrad,color:ON_ACCENT,padding:"12px 28px",fontSize:15}}>
             {idx<questions.length-1?"Next →":"Results →"}
           </button>
         </div>
@@ -1140,8 +1234,8 @@ function StatsView({ vocab, mastery, daily, calendar, xp, ach, onReset }) {
             {l:"新しく学習",v:d.learned,c:C.gold},
             {l:"習得した",v:d.mastered,c:C.ok},
           ].map(s=>(
-            <div key={s.l} style={{flex:1,padding:"14px 8px",background:C.card,borderRadius:10,textAlign:"center"}}>
-              <div style={{fontSize:26,fontWeight:700,color:s.c}}>{s.v}</div>
+            <div key={s.l} className="glass" style={glassSx(12,{flex:1,padding:"14px 8px",textAlign:"center"})}>
+              <CountUp value={s.v} style={{fontSize:28,fontWeight:700,color:s.c,display:"inline-block"}} />
               <div style={{fontSize:11,color:C.muted,marginTop:2}}>{s.l}</div>
             </div>
           ))}
@@ -1156,9 +1250,11 @@ function StatsView({ vocab, mastery, daily, calendar, xp, ach, onReset }) {
             const n=cal[dk]||0;
             const isToday=dk===todayKey();
             return (
-              <div key={dk} title={dk+"："+n+"問"}
+              <div key={dk} className="cell-wrap"
                 style={{aspectRatio:"1",borderRadius:4,background:heatColor(n),
-                  border:isToday?"2px solid "+C.lav:"1px solid "+C.bdr}} />
+                  border:isToday?"2px solid "+C.lav:"1px solid "+C.bdr}}>
+                <span className="cell-tip">{dk.slice(5)}・{n}問</span>
+              </div>
             );
           })}
         </div>
@@ -1202,18 +1298,20 @@ function StatsView({ vocab, mastery, daily, calendar, xp, ach, onReset }) {
           <span>{lv.next ? (lv.into+" / "+lv.span+" XP → "+lv.next.icon+" "+lv.next.n) : "MAX LEVEL 🌟"}</span>
         </div>
         <div style={{height:7,background:C.card,borderRadius:4,overflow:"hidden"}}>
-          <div style={{height:"100%",width:lv.pct+"%",background:"linear-gradient(90deg,"+C.dusty+","+C.gold+")",transition:"width .5s"}} />
+          <div className="shimmer" style={{height:"100%",width:lv.pct+"%",background:"linear-gradient(90deg,"+C.dusty+","+C.gold+")",transition:"width .5s"}} />
         </div>
       </div>
 
       <div style={{textAlign:"center",marginBottom:24}}>
-        <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:56,fontWeight:700,color:C.lav}}>{pct}%</div>
+        <div className="txt-glow" style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:56,fontWeight:700,color:C.lav}}>
+          <CountUp value={pct} />%
+        </div>
         <div style={{color:C.muted,fontSize:14}}>習得率 ({mastered} / {total} words)</div>
       </div>
       <div style={{display:"flex",gap:8,marginBottom:24}}>
         {[{l:"習得済",v:mastered,c:C.ok},{l:"学習中",v:learning,c:C.gold},{l:"未学習",v:newW,c:C.muted}].map(s=>(
-          <div key={s.l} style={{flex:1,padding:12,background:C.card,borderRadius:10,textAlign:"center"}}>
-            <div style={{fontSize:24,fontWeight:700,color:s.c}}>{s.v}</div>
+          <div key={s.l} className="glass" style={glassSx(12,{flex:1,padding:12,textAlign:"center"})}>
+            <CountUp value={s.v} style={{fontSize:24,fontWeight:700,color:s.c,display:"inline-block"}} />
             <div style={{fontSize:11,color:C.muted}}>{s.l}</div>
           </div>
         ))}
@@ -1231,7 +1329,7 @@ function StatsView({ vocab, mastery, daily, calendar, xp, ach, onReset }) {
                 <span style={{color:C.muted}}>{cm}/{cw.length}</span>
               </div>
               <div style={{height:6,background:C.card,borderRadius:3,overflow:"hidden"}}>
-                <div style={{height:"100%",width:cp+"%",background:CAT_C[c],borderRadius:3,transition:"width 0.5s"}} />
+                <div className="shimmer" style={{height:"100%",width:cp+"%",background:CAT_C[c],borderRadius:3,transition:"width 0.5s"}} />
               </div>
             </div>
           );
@@ -1261,9 +1359,11 @@ function StatsView({ vocab, mastery, daily, calendar, xp, ach, onReset }) {
           {ACH.map(a=>{
             const got=!!(ach||{})[a.id];
             return (
-              <div key={a.id} title={a.desc}
+              <div key={a.id} title={a.desc} className={got?"glass":""}
                 style={{position:"relative",padding:"14px 6px",borderRadius:12,textAlign:"center",
                   background:got?C.card:C.bg,border:"1px solid "+(got?C.gold:C.bdr),
+                  borderTop:got?"1px solid "+C.glassTop:"1px solid "+C.bdr,
+                  boxShadow:got?C.glassShadow:"none",
                   filter:got?"none":"grayscale(1)",opacity:got?1:0.4,transition:"all .3s"}}>
                 {got&&<span className="sparkle" style={{position:"absolute",top:4,right:6,fontSize:11}}>✨</span>}
                 <div style={{fontSize:28,lineHeight:1,marginBottom:6}}>{a.icon}</div>
@@ -1375,8 +1475,8 @@ function ComposeMode({ onSolved }) {
         placeholder="ここに英文を書いてください..." rows={5}
         style={{width:"100%",padding:"14px 16px",borderRadius:12,border:"1.5px solid "+C.bdr,
           background:C.card,color:C.cream,fontSize:15,outline:"none",resize:"vertical",lineHeight:1.6}} />
-      <button onClick={submit} disabled={!canSend}
-        style={{...baseBtn,background:canSend?C.plum:C.card,color:canSend?ON_ACCENT:C.muted,padding:"14px 0",fontSize:15,width:"100%",marginTop:12,opacity:canSend?1:0.5}}>
+      <button onClick={submit} disabled={!canSend} className="main-btn"
+        style={{...baseBtn,background:canSend?C.btnGrad:C.card,color:canSend?ON_ACCENT:C.muted,padding:"14px 0",fontSize:15,width:"100%",marginTop:12,opacity:canSend?1:0.5}}>
         {loading?"添削中…":"添削してもらう"}
       </button>
       {error&&(
@@ -1483,7 +1583,8 @@ function App() {
   // Theme — keep <body> background/text in sync and persist choice.
   useEffect(() => {
     applyTheme(theme);
-    document.body.style.background = C.bg;
+    document.body.style.background = C.bgGrad;
+    document.body.style.backgroundAttachment = "fixed";
     document.body.style.color = C.cream;
     saveTheme(theme);
   }, [theme]);
@@ -1648,13 +1749,15 @@ function App() {
   const lv = levelInfo(xp);
 
   return (
-    <div style={{minHeight:"100vh",background:C.bg,color:C.cream,maxWidth:480,margin:"0 auto"}}>
+    <div style={{minHeight:"100vh",background:C.bgGrad,color:C.cream,maxWidth:480,margin:"0 auto",position:"relative",zIndex:1}}>
+      <Ambient />
+      <div style={{position:"relative",zIndex:1}}>
       {/* Word of the day (launch modal) */}
       {showWotd&&wotd&&(
         <div style={{position:"fixed",inset:0,zIndex:9996,background:"rgba(17,10,20,0.92)",
           display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
-          <div className="fade-in" style={{maxWidth:380,width:"100%",background:C.card,borderRadius:20,
-            padding:"32px 24px",textAlign:"center",border:"1px solid "+C.bdr,boxShadow:"0 20px 60px rgba(0,0,0,0.5)"}}>
+          <div className="modal-pop glass" style={{maxWidth:380,width:"100%",background:C.card,borderRadius:20,
+            padding:"32px 24px",textAlign:"center",border:"1px solid "+C.bdr,borderTop:"1px solid "+C.glassTop,boxShadow:"0 20px 60px rgba(0,0,0,0.5)"}}>
             <div style={{fontSize:12,letterSpacing:3,color:C.muted,marginBottom:14}}>今日の一語 · WORD OF THE DAY</div>
             <span style={{background:CAT_C[wotd.c],color:"white",padding:"3px 12px",borderRadius:20,fontSize:12}}>{CAT_L[wotd.c]}</span>
             <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:34,fontWeight:700,color:C.lilac,margin:"18px 0 8px",lineHeight:1.2}}>{wotd.w}</div>
@@ -1666,8 +1769,8 @@ function App() {
               </div>
               <div style={{fontSize:15,fontStyle:"italic",lineHeight:1.6,color:C.lilac}}>{wotd.e}</div>
             </div>
-            <button onClick={()=>{setShowWotd(false);fireFx("wave");}}
-              style={{...baseBtn,background:C.plum,color:ON_ACCENT,padding:"14px 0",fontSize:15,width:"100%"}}>学習を始める →</button>
+            <button onClick={()=>{setShowWotd(false);fireFx("wave");}} className="main-btn"
+              style={{...baseBtn,background:C.btnGrad,color:ON_ACCENT,padding:"14px 0",fontSize:15,width:"100%"}}>学習を始める →</button>
           </div>
         </div>
       )}
@@ -1697,7 +1800,7 @@ function App() {
                 display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,borderRadius:999}}>
               {theme==="dark"?"☀️":"🌙"}
             </button>
-            <div title="連続学習日数" style={{display:"flex",alignItems:"center",gap:4,background:C.card,padding:"4px 10px",borderRadius:999,fontSize:14,fontWeight:700,color:streakDays>0?C.gold:C.muted}}>
+            <div title="連続学習日数" className={streakDays>0?"txt-glow":""} style={{display:"flex",alignItems:"center",gap:4,background:C.card,padding:"4px 10px",borderRadius:999,fontSize:14,fontWeight:700,color:streakDays>0?C.gold:C.muted}}>
               <span style={{fontSize:16,filter:streakDays>0?"none":"grayscale(1) opacity(0.6)"}}>🔥</span>{streakDays}
             </div>
           </div>
@@ -1727,14 +1830,14 @@ function App() {
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:4}}>
             <span style={{fontSize:13,fontWeight:700,color:C.lav,display:"flex",alignItems:"center",gap:5}}>
               <span key={headerFx.key} className={headerFx.type} style={{fontSize:17,display:"inline-block"}}>{lv.icon}</span>
-              <span><span style={{color:C.gold}}>Lv{lv.lvNum}</span> {lv.name}</span>
+              <span className="txt-glow"><span style={{color:C.gold}}>Lv{lv.lvNum}</span> {lv.name}</span>
             </span>
             <span style={{fontSize:11,color:C.muted}}>
               {lv.next ? (lv.into+" / "+lv.span+" XP → "+lv.next.icon+" "+lv.next.n) : (lv.xp+" XP · MAX")}
             </span>
           </div>
           <div style={{height:6,background:C.card,borderRadius:3,overflow:"hidden"}}>
-            <div style={{height:"100%",width:lv.pct+"%",background:"linear-gradient(90deg,"+C.dusty+","+C.gold+")",transition:"width 0.5s"}} />
+            <div className="shimmer" style={{height:"100%",width:lv.pct+"%",background:"linear-gradient(90deg,"+C.dusty+","+C.gold+")",transition:"width 0.5s"}} />
           </div>
         </div>
       </div>
@@ -1758,7 +1861,7 @@ function App() {
       )}
 
       {/* Content */}
-      <div style={{paddingBottom:80}}>
+      <div key={mode} className="tab-anim" style={{paddingBottom:80}}>
         {mode==="quiz"&&<QuizMode vocab={VOCAB} mastery={mastery} onAnswer={handleQuizAnswer} onCombo={handleCombo} onPerfect={handlePerfect} catFilter={catFilter} />}
         {mode==="type"&&<TypeMode vocab={VOCAB} mastery={mastery} onAnswer={handleTypeAnswer} onCombo={handleCombo} onPerfect={handlePerfect} catFilter={catFilter} />}
         {mode==="compose"&&<ComposeMode onSolved={handleCompose} />}
@@ -1776,6 +1879,7 @@ function App() {
             <span style={{fontSize:10,fontWeight:mode===t.id?600:400}}>{t.label}</span>
           </button>
         ))}
+      </div>
       </div>
     </div>
   );
