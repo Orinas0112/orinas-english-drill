@@ -647,25 +647,91 @@ How can I help|何かお手伝いできる?|Hi, how can I help?|bg`.trim().split
 });
 
 // ═══════════════════ COMPOSE SCENARIOS ═══════════════════
+// Compose folders (categories) — each scenario belongs to one folder.
+const FOLDERS = [
+  { id:"fb", icon:"📋", name:"1on1 フィードバック",        color:"#E07AA8" },
+  { id:"cg", icon:"🌱", name:"1on1 キャリア・成長",        color:"#4FB0A5" },
+  { id:"wb", icon:"💛", name:"1on1 ウェルビーイング",      color:"#7FBF8F" },
+  { id:"mt", icon:"🪑", name:"会議・ファシリテーション",    color:"#6A9FD8" },
+  { id:"cl", icon:"🤝", name:"クライアント・パートナー対応", color:"#E08840" },
+  { id:"em", icon:"✉️", name:"ビジネスメール",            color:"#8595C9" },
+  { id:"tm", icon:"📣", name:"チーム運営・アナウンス",      color:"#D4A054" },
+  { id:"of", icon:"☕", name:"日常オフィス",               color:"#B6C24F" },
+];
+const FOLDER_MAP = FOLDERS.reduce((m,f)=>{m[f.id]=f;return m;},{});
+const DIFFS = { 1:{ label:"★", color:"#7FBF8F" }, 2:{ label:"★★", color:"#D4A054" }, 3:{ label:"★★★", color:"#D85A6A" } };
+
 const SCENARIOS = [
-  { id:1,  cat:"c", t:"方向性のすり合わせ", s:"新しい施策を進める前に、チームで認識を合わせたい。会議の冒頭で、合意してから計画を固めようと提案する。", words:["align","lock in"] },
-  { id:2,  cat:"c", t:"問題のエスカレーション", s:"クライアントから懸念が上がってきた。気づいた点を共有し、必要なら上長を巻き込んで上に上げたい。", words:["flag","escalate","loop in"] },
-  { id:3,  cat:"c", t:"優先順位の指示", s:"メンバーが複数の案件を抱えて手一杯。何を優先し、何を後回しにするか方針を伝える。", words:["prioritize","deprioritize","that said"] },
-  { id:4,  cat:"a", t:"権限委譲", s:"有望なPMに案件をまるごと任せたい。主体的に担ってもらえるよう、裁量を渡すことを伝える。", words:["delegate","empower","own"] },
-  { id:5,  cat:"c", t:"1on1でのフォロー", s:"先週の議論の続き。今は一旦置いて後で戻り、進捗を随時共有してほしいと伝える。", words:["circle back","follow up","keep me posted"] },
-  { id:6,  cat:"t", t:"成果不足の指摘", s:"あるメンバーの成果が不安定で、締切遅れが続いている。事実ベースで指摘し、改善計画を立てたい。", words:["underperforming","a pattern","improvement plan"] },
-  { id:7,  cat:"t", t:"厳しいフィードバック", s:"現状の品質は基準に届いていない。譲れない点を明確にし、具体的な改善手順を求める。", words:["not meeting the bar","non-negotiable","concrete steps"] },
-  { id:8,  cat:"t", t:"契約非更新の通知", s:"残念ながら契約を更新しない判断に至った。円満に別の道へ進めるよう、退職手当も含めて伝える。", words:["non-renewal","part ways","severance"] },
-  { id:9,  cat:"t", t:"謝罪と責任", s:"自分の見落としでトラブルが起きた。言い訳せず、全責任を認めて謝る。", words:["that's on me","I take full responsibility","my oversight"] },
-  { id:10, cat:"t", t:"対立の仲裁", s:"二人のメンバーが衝突している。間に入り、共通点を探り、わだかまりを解消したい。", words:["mediate","find common ground","clear the air"] },
-  { id:11, cat:"a", t:"戦略の方向転換", s:"今の施策は本質的な変化を生んでいない。トレードオフを認識した上で方向転換を提案する。", words:["pivot","move the needle","trade-off"] },
-  { id:12, cat:"a", t:"オンボーディング計画", s:"新メンバーを受け入れる。早く戦力化できるよう、立ち上がりと状況把握の計画を伝える。", words:["onboard","ramp up","get up to speed"] },
-  { id:13, cat:"cr", t:"キャリアの1on1", s:"優秀なメンバーと半期の1on1。長期的にどうなりたいかを引き出し、次の一歩と伸ばすべき領域を一緒に描く。", words:["where do you see yourself","next step","area for growth"] },
-  { id:14, cat:"pr", t:"成果を称える", s:"四半期で大きな成果を上げたメンバーを正当に評価し、励ます。具体的に何が良かったかを伝える。", words:["you nailed it","above and beyond","well-deserved"] },
-  { id:15, cat:"wb", t:"体調と燃え尽きへの配慮", s:"最近忙しそうなメンバーを気遣う1on1。安心して話せる場を作り、持続可能なペースを一緒に考える。", words:["how are you holding up","sustainable pace","safe space"] },
-  { id:16, cat:"ng", t:"クライアントとの値上げ交渉", s:"長期クライアントに値上げを提案する。相互利益と長期的な関係を強調し、双方が得をする形に着地させたい。", words:["price increase","mutual benefit","win-win"] },
-  { id:17, cat:"fn", t:"四半期の業績報告", s:"経営会議で四半期の数字を報告する。売上・利益率・前年比に触れ、今後の見通しを共有する。", words:["revenue","margin","year-over-year"] },
-  { id:18, cat:"lg", t:"契約更新の連絡", s:"パートナーに契約更新を打診する。発効日や更新条項に触れ、誠実に進めたい旨を伝える。", words:["renewal","effective date","in good faith"] },
+  // 📋 1on1 フィードバック
+  { id:1,  folder:"fb", diff:1, t:"良い仕事を褒める", s:"今週great な仕事をしたメンバーを称える。具体的に何が良かったかを伝え、その調子で続けてほしいと励ます。", words:["you nailed it","well-deserved","keep it up"] },
+  { id:2,  folder:"fb", diff:1, t:"進捗を確認する", s:"担当案件の進み具合を1on1で確認する。順調かどうかを尋ね、随時共有してほしいと伝える。", words:["check in","on track","keep me posted"] },
+  { id:3,  folder:"fb", diff:1, t:"日々の貢献を認める", s:"目立たないが期待以上の働きをしてくれたメンバーへ。感謝と称賛をきちんと言葉にする。", words:["above and beyond","recognize","shout-out"] },
+  { id:4,  folder:"fb", diff:2, t:"改善点を伝える", s:"成果はあるが詰めが甘い点がある。事実ベースで指摘し、具体的にやり切ってほしいと伝える。", words:["falling short","concrete steps","follow through"] },
+  { id:5,  folder:"fb", diff:2, t:"期待値を再設定する", s:"求める水準と現状にズレがある。基準を上げる必要があることを、率直に共有する。", words:["set expectations","raise the bar","that said"] },
+  { id:6,  folder:"fb", diff:2, t:"締切遅れのパターンを指摘", s:"締切遅れが繰り返されている。傾向として指摘し、改善計画を一緒に立てる。", words:["a pattern","address","improvement plan"] },
+  { id:7,  folder:"fb", diff:2, t:"行動の癖を指摘する", s:"会議で他人の発言を遮る癖がある。人格ではなく行動として、冷静に指摘する。", words:["overstep","depersonalize","concrete steps"] },
+  { id:8,  folder:"fb", diff:3, t:"厳しい評価を伝える", s:"残念ながら成果が基準に届いていない。譲れない点を明確にし、現状を正面から伝える。", words:["underperforming","not meeting the bar","non-negotiable"] },
+  { id:9,  folder:"fb", diff:3, t:"契約非更新を伝える", s:"契約を更新しない判断に至った。円満に別の道へ進めるよう、退職手当も含めて伝える。", words:["non-renewal","part ways","severance"] },
+  { id:10, folder:"fb", diff:3, t:"役割からの段階的離脱", s:"このまま続けるのは双方にとって難しい。段階的に役割を縮小していくことを慎重に伝える。", words:["transition out","wind down","not working out"] },
+  // 🌱 1on1 キャリア・成長
+  { id:11, folder:"cg", diff:1, t:"目標を確認する", s:"半期のキャリア1on1。長期的にどうなりたいか、何にワクワクするかを引き出す。", words:["where do you see yourself","next step","what excites you"] },
+  { id:12, folder:"cg", diff:1, t:"強みを伝える", s:"本人が自覚していない強みを言葉にして伝える。強みを活かす方向を一緒に考える。", words:["play to your strengths","potential","you've come a long way"] },
+  { id:13, folder:"cg", diff:2, t:"キャリアパスを議論する", s:"中期的なキャリアの選択肢を一緒に描く。長期ビジョンと、伸ばすべき領域をすり合わせる。", words:["career path","long-term vision","area for growth"] },
+  { id:14, folder:"cg", diff:2, t:"ストレッチ課題を提案する", s:"一段上の挑戦を任せたい。背伸びする目標を提示し、一歩踏み出すよう後押しする。", words:["stretch goal","step up","stretch yourself"] },
+  { id:15, folder:"cg", diff:2, t:"視座を上げる提案", s:"担当範囲を広げ、組織での存在感を高めてほしい。主体的に動くよう促す。", words:["broaden your scope","visibility","take initiative"] },
+  { id:16, folder:"cg", diff:2, t:"スキルギャップを埋める", s:"次の役割に必要なスキルの差を整理する。メンターをつけ、自分の成長を主導するよう促す。", words:["skill gap","mentor","own your development"] },
+  { id:17, folder:"cg", diff:3, t:"役割変更を伝える", s:"組織の都合で役割を変える必要がある。一歩引いて見直す形になることを、丁寧に伝える。", words:["step back","reassess","concrete steps"] },
+  { id:18, folder:"cg", diff:3, t:"降格を慎重に伝える", s:"成果が基準に届かず、役割を一段下げる判断に至った。線引きを明確にしつつ慎重に伝える。", words:["falling short","draw a line","address"] },
+  // 💛 1on1 ウェルビーイング
+  { id:19, folder:"wb", diff:1, t:"体調を気遣う", s:"最近疲れて見えるメンバーを気遣う。プレッシャーを与えず、様子を尋ねる。", words:["how are you holding up","check in on you","no pressure"] },
+  { id:20, folder:"wb", diff:1, t:"休暇を勧める", s:"頑張りすぎているメンバーに休みを勧める。罪悪感なく充電してほしいと伝える。", words:["take a break","recharge","no judgment"] },
+  { id:21, folder:"wb", diff:2, t:"燃え尽きの兆候に対応", s:"燃え尽きの兆候が見える。無理が続いていないかを確認し、持続可能なペースを一緒に考える。", words:["burnout","running on empty","sustainable pace"] },
+  { id:22, folder:"wb", diff:2, t:"業務量を調整する", s:"明らかに抱えすぎている。負荷を軽くし、自分の時間を守れるよう一緒に整理する。", words:["lighten your load","protect your time","overwhelmed"] },
+  { id:23, folder:"wb", diff:3, t:"メンタルヘルスに触れる", s:"心の不調が疑われる。安心して話せる場であることを伝え、一人ではないと寄り添う。", words:["mental health","safe space","you're not alone"] },
+  { id:24, folder:"wb", diff:3, t:"長期休養を勧める", s:"一度仕事から離れる必要がありそう。休む許可を明確に与え、自分のペースでと伝える。", words:["step away","permission to rest","at your own pace"] },
+  // 🪑 会議・ファシリテーション
+  { id:25, folder:"mt", diff:1, t:"会議を開始する", s:"定例会議の冒頭。前回の振り返りをし、今日の方向性を示して始める。", words:["kick off","recap","set the direction"] },
+  { id:26, folder:"mt", diff:1, t:"議題を確認する", s:"本題に入る前に、今日扱う項目を一通り共有し、全員の認識を合わせる。", words:["walk through","on the same page","next step"] },
+  { id:27, folder:"mt", diff:1, t:"会議を終了する", s:"会議を締める。決まったことを確認し、次のアクションとフォロー方法を共有する。", words:["wrap up","next step","follow up"] },
+  { id:28, folder:"mt", diff:2, t:"脱線を本筋に戻す", s:"議論が枝葉に逸れてきた。細部は別途扱うことにして、本題に戻す。", words:["take it offline","that said","on track"] },
+  { id:29, folder:"mt", diff:2, t:"意見が割れた時にまとめる", s:"意見が二つに割れた。共通点を見つけ、最終的に意思決定する。", words:["find common ground","weigh in","make the call"] },
+  { id:30, folder:"mt", diff:2, t:"全員の意見を引き出す", s:"一部の人しか話していない。静かな人にも発言を促し、意見を出してもらう。", words:["chime in","weigh in","my two cents"] },
+  { id:31, folder:"mt", diff:3, t:"経営会議で戦略変更を発表", s:"今の路線では成果が出ていない。トレードオフを認めた上で、戦略の方向転換を発表する。", words:["pivot","move the needle","trade-off"] },
+  { id:32, folder:"mt", diff:3, t:"厳しい数字と方針転換", s:"資金の消費が早く、軌道修正が必要。北極星を再確認し、優先度を組み直す方針を示す。", words:["burn rate","course-correct","north star"] },
+  // 🤝 クライアント・パートナー対応
+  { id:33, folder:"cl", diff:1, t:"自己紹介する", s:"新しいクライアントとの初回。挨拶し、連絡した経緯を述べ、今後を楽しみにしていると伝える。", words:["Nice to meet you","I wanted to reach out","looking forward to"] },
+  { id:34, folder:"cl", diff:1, t:"サービスを説明する", s:"自社サービスを紹介する。全体像を順に説明し、提供価値を分かりやすく伝える。", words:["walk through","value proposition","end-to-end"] },
+  { id:35, folder:"cl", diff:1, t:"フォローアップする", s:"前回の打ち合わせの続き。話した内容を踏まえ、改めて連絡し進める。", words:["following up on","as discussed","circle back"] },
+  { id:36, folder:"cl", diff:2, t:"値上げを伝える", s:"長期クライアントに値上げを伝える。相互利益と長期的な関係を強調する。", words:["price increase","mutual benefit","long-term relationship"] },
+  { id:37, folder:"cl", diff:2, t:"条件を交渉する", s:"条件面で隔たりがある。歩み寄り、お互い譲り合いながら着地点を探る。", words:["meet halfway","on the table","give and take"] },
+  { id:38, folder:"cl", diff:2, t:"提案を擦り合わせる", s:"提案内容に相手が一部難色。共通点を起点に、柔軟に調整する姿勢を示す。", words:["proposal","common ground","open to"] },
+  { id:39, folder:"cl", diff:2, t:"中間地点を探る", s:"価格で折り合いがつかない。中間案や譲歩を出し、双方が得をする形を目指す。", words:["middle ground","concession","win-win"] },
+  { id:40, folder:"cl", diff:3, t:"クレームに対応する", s:"重大なミスでクライアントを怒らせた。非を認めて謝罪し、具体的な再発防止策を示す。", words:["I owe you an apology","address","concrete steps"] },
+  { id:41, folder:"cl", diff:3, t:"契約打ち切りを伝える", s:"取引を終了する判断に至った。通知期間に触れ、誠実に進めたい旨を伝える。", words:["terminate","notice period","in good faith"] },
+  { id:42, folder:"cl", diff:3, t:"交渉決裂を伝える", s:"これ以上は譲れない条件がある。決裂もやむなしの線を示しつつ、撤退の意思を伝える。", words:["deal-breaker","walk away","bottom line"] },
+  // ✉️ ビジネスメール
+  { id:43, folder:"em", diff:1, t:"お礼メール", s:"先日の協力に感謝するメールを書く。丁寧な書き出しと結びで、礼を尽くす。", words:["I hope this email finds you well","thank you in advance","best regards"] },
+  { id:44, folder:"em", diff:1, t:"フォローアップメール", s:"前回話した件の進捗を確認するメール。経緯に触れ、返信を待つ旨を添える。", words:["following up on","as discussed","looking forward to"] },
+  { id:45, folder:"em", diff:1, t:"資料を送付する", s:"依頼された資料を送るメール。添付を案内し、参考用である旨と問い合わせ歓迎を伝える。", words:["please find attached","for your reference","please don't hesitate"] },
+  { id:46, folder:"em", diff:2, t:"丁寧に断る", s:"依頼を今回は受けられない。遅れた返信を詫び、現時点では難しい旨を丁寧に伝える。", words:["apologies for the delay","at this time","please be advised"] },
+  { id:47, folder:"em", diff:2, t:"日程変更を依頼する", s:"予定の都合がつかず、リスケを依頼するメール。都合の良い日時を尋ねる。", words:["Can we reschedule","at your earliest convenience","I'd appreciate your input"] },
+  { id:48, folder:"em", diff:2, t:"内容を確認する", s:"受領確認と内容のすり合わせメール。件名に触れ、丁寧に確認を依頼する。", words:["to confirm receipt","regarding","kindly"] },
+  { id:49, folder:"em", diff:3, t:"重要なエスカレーション", s:"至急の判断が必要な問題を上層部にメールで上げる。緊急性を明確に伝える。", words:["escalate","time-sensitive","please be advised"] },
+  { id:50, folder:"em", diff:3, t:"正式な謝罪", s:"組織として正式に謝罪するメール。全責任を認め、見落としを率直に詫びる。", words:["I take full responsibility","my oversight","apologies for the delay"] },
+  // 📣 チーム運営・アナウンス
+  { id:51, folder:"tm", diff:1, t:"新メンバーを歓迎する", s:"新しく加わったメンバーをチームに紹介する。歓迎し、早く馴染めるよう後押しする。", words:["Nice to meet you","onboard","get up to speed"] },
+  { id:52, folder:"tm", diff:1, t:"成果を全体に共有する", s:"チームの大きな成果を全体に共有する。貢献者を称え、誇りを言葉にする。", words:["shout-out","proud of the team","well-deserved"] },
+  { id:53, folder:"tm", diff:2, t:"組織変更を説明する", s:"体制変更を全体にアナウンスする。今後どう進めるか、何を期待するかを明確に示す。", words:["roll out","going forward","set expectations"] },
+  { id:54, folder:"tm", diff:2, t:"権限委譲を正式に伝える", s:"あるリーダーに領域を正式に任せる。裁量を渡し、主体的に担ってもらう旨を全体に伝える。", words:["delegate","empower","own"] },
+  { id:55, folder:"tm", diff:3, t:"チーム統合を伝える", s:"二つのチームを統合する。動揺もある中、今後の進め方と懸念への向き合い方を伝える。", words:["transition out","going forward","address"] },
+  { id:56, folder:"tm", diff:3, t:"人員削減を伝える", s:"やむを得ず人員を減らす。別れを誠実に伝え、退職手当などの配慮を示す。", words:["part ways","severance","in good faith"] },
+  // ☕ 日常オフィス
+  { id:57, folder:"of", diff:1, t:"何かを依頼する", s:"同僚に軽くお願いごとをする。丁寧に頼み、感謝を添える。", words:["Could you","Would you mind","Appreciate it"] },
+  { id:58, folder:"of", diff:1, t:"スモールトークをする", s:"同僚と軽い雑談。近況を尋ね、軽く約束して切り上げる。", words:["How's it going","Sounds like a plan","Talk soon"] },
+  { id:59, folder:"of", diff:2, t:"その場で即答を避ける", s:"急な依頼に即答できない。一度持ち帰る旨を、角を立てずに伝える。", words:["Let me get back to you","No worries","at this time"] },
+  { id:60, folder:"of", diff:2, t:"誤解を解く", s:"小さな行き違いが起きた。相手の言い分を認めつつ、誤解を解いて確認する。", words:["I see your point","clear the air","Just to confirm"] },
+  { id:61, folder:"of", diff:3, t:"文化の違いによる摩擦に対応", s:"文化の違いから生じた衝突を仲裁する。双方の言い分を聞き、人格を切り離して共通点を探る。", words:["find common ground","depersonalize","hear both sides"] },
+  { id:62, folder:"of", diff:3, t:"板挟みを調整する", s:"二者の要求が対立し板挟みになっている。歩み寄りを促しつつ、最終的に判断する。", words:["meet halfway","that said","make the call"] },
 ];
 
 // ═══════════════════ UTILS ═══════════════════
@@ -863,6 +929,12 @@ function loadAchc() {
   catch(e) { return { correctTotal:0, consecutiveCorrect:0, composeDone:0 }; }
 }
 function saveAchc(c) { try { localStorage.setItem('orinas-achc-v1', JSON.stringify(c)); } catch(e) {} }
+// ── Compose completion (per-scenario best score) ──
+function loadCompose() {
+  try { const r = localStorage.getItem('orinas-compose-v1'); return r ? JSON.parse(r) : {}; }
+  catch(e) { return {}; }
+}
+function saveCompose(c) { try { localStorage.setItem('orinas-compose-v1', JSON.stringify(c)); } catch(e) {} }
 // Each test receives the live stats object and returns true once unlocked.
 const ACH = [
   { id:"first_step",   icon:"🌟",   name:"First Step",     desc:"初めて正解した",            test:s=>s.correctTotal>=1 },
@@ -1399,9 +1471,23 @@ function ComposeMode({ onSolved }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [comp, setComp] = useState(loadCompose);
+  const [openFolders, setOpenFolders] = useState({ fb:true });
+  const [diffFilter, setDiffFilter] = useState("all");
+  const [sortUncompleted, setSortUncompleted] = useState(true);
 
   const wordInfo = w => VOCAB.find(v=>v.w===w) || { w, m:"" };
   const reset = () => { setText(""); setResult(null); setError(null); };
+  const best = id => (comp[id] && comp[id].best) || 0;
+  const done = id => best(id) > 0;
+  const folderOf = s => FOLDER_MAP[s.folder];
+  const folderScenarios = fid => {
+    let list = SCENARIOS.filter(s=>s.folder===fid && (diffFilter==="all" || s.diff===diffFilter));
+    if(sortUncompleted) list = [...list].sort((a,b)=>(done(a.id)?1:0)-(done(b.id)?1:0));
+    return list;
+  };
+  const folderTotal = fid => SCENARIOS.filter(s=>s.folder===fid).length;
+  const folderDone = fid => SCENARIOS.filter(s=>s.folder===fid && done(s.id)).length;
 
   const submit = async () => {
     if(!text.trim()||loading) return;
@@ -1415,8 +1501,16 @@ function ComposeMode({ onSolved }) {
       const data = await res.json().catch(()=>({}));
       if(!res.ok) throw new Error(data.error || ("サーバーエラー ("+res.status+")"));
       setResult(data);
+      const r = data.rating || 0;
+      if(r >= 1) {
+        setComp(prev => {
+          const next = { ...prev, [sc.id]: { best: Math.max((prev[sc.id]&&prev[sc.id].best)||0, r) } };
+          saveCompose(next);
+          return next;
+        });
+      }
       if(onSolved) onSolved();
-      if((data.rating||0)>=4) confetti(60,true);
+      if(r>=4) confetti(60,true);
     } catch(e) {
       setError(e.message || "通信に失敗しました。");
     } finally {
@@ -1424,42 +1518,77 @@ function ComposeMode({ onSolved }) {
     }
   };
 
-  // ── Scenario list ──
+  // ── Scenario list (folder accordion) ──
   if(!sc) {
+    const filters = [["all","すべて"],[1,"★"],[2,"★★"],[3,"★★★"]];
     return (
       <div className="fade-in" style={{padding:"16px 20px"}}>
         <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:22,fontWeight:700,marginBottom:6}}>Compose</div>
-        <div style={{color:C.muted,fontSize:13,marginBottom:18,lineHeight:1.6}}>シナリオを1つ選び、指定の単語をすべて使って英作文しましょう。AIが添削します。</div>
-        <div style={{display:"flex",flexDirection:"column",gap:10}}>
-          {SCENARIOS.map(s=>(
-            <button key={s.id} onClick={()=>{setSc(s);reset();}}
-              style={{...baseBtn,background:C.card,border:"1px solid "+C.bdr,padding:"14px 16px",textAlign:"left",width:"100%"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                <span style={{color:C.cream,fontWeight:600,fontSize:15}}>{s.t}</span>
-                <span style={{background:CAT_C[s.cat],color:"white",padding:"2px 8px",borderRadius:20,fontSize:11}}>{CAT_L[s.cat]}</span>
-              </div>
-              <div style={{color:C.muted,fontSize:12,lineHeight:1.5,marginBottom:8}}>{s.s}</div>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                {s.words.map(w=>(
-                  <span key={w} style={{background:C.cardH,color:C.lav,padding:"2px 8px",borderRadius:6,fontSize:12}}>{w}</span>
-                ))}
-              </div>
-            </button>
+        <div style={{color:C.muted,fontSize:13,marginBottom:14,lineHeight:1.6}}>シナリオを1つ選び、指定の単語をすべて使って英作文しましょう。AIが添削します。</div>
+        <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
+          {filters.map(([val,lbl])=>(
+            <button key={val} onClick={()=>setDiffFilter(val)}
+              style={{...baseBtn,padding:"6px 14px",fontSize:13,borderRadius:20,
+                background:diffFilter===val?C.btnGrad:C.card,color:diffFilter===val?ON_ACCENT:C.muted,
+                border:"1px solid "+(diffFilter===val?"transparent":C.bdr)}}>{lbl}</button>
           ))}
+        </div>
+        <button onClick={()=>setSortUncompleted(v=>!v)}
+          style={{...baseBtn,padding:"6px 12px",fontSize:12,borderRadius:8,background:"transparent",
+            color:sortUncompleted?C.lav:C.muted,border:"1px solid "+C.bdr,marginBottom:16}}>
+          {sortUncompleted?"☑":"☐"} 未完了を上に
+        </button>
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {FOLDERS.map(f=>{
+            const total = folderTotal(f.id), dn = folderDone(f.id);
+            const list = folderScenarios(f.id);
+            const open = !!openFolders[f.id];
+            return (
+              <div key={f.id} style={{...glassSx(14),overflow:"hidden"}}>
+                <button onClick={()=>setOpenFolders(o=>({...o,[f.id]:!o[f.id]}))}
+                  style={{...baseBtn,background:"transparent",padding:"13px 15px",width:"100%",textAlign:"left",display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontSize:20}}>{f.icon}</span>
+                  <span style={{flex:1,color:C.cream,fontWeight:600,fontSize:15}}>{f.name}</span>
+                  <span style={{color:f.color,fontSize:12,fontWeight:600}}>{dn}/{total} 完了</span>
+                  <span style={{color:C.muted,fontSize:12,transform:open?"rotate(90deg)":"none",transition:"transform 0.2s"}}>▶</span>
+                </button>
+                {open && (
+                  <div style={{display:"flex",flexDirection:"column",borderTop:"1px solid "+C.bdr}}>
+                    {list.length===0 && <div style={{padding:"12px 16px",color:C.muted,fontSize:12}}>該当するシナリオはありません</div>}
+                    {list.map(s=>(
+                      <button key={s.id} onClick={()=>{setSc(s);reset();}}
+                        style={{...baseBtn,background:"transparent",padding:"11px 15px",textAlign:"left",width:"100%",
+                          display:"flex",alignItems:"center",gap:10,borderTop:"1px solid "+C.bdr}}>
+                        <span style={{background:DIFFS[s.diff].color,color:"white",padding:"1px 7px",borderRadius:12,fontSize:10,fontWeight:600,whiteSpace:"nowrap"}}>{DIFFS[s.diff].label}</span>
+                        <span style={{flex:1,color:C.cream,fontSize:14}}>{s.t}</span>
+                        {done(s.id) && <span style={{color:C.gold,fontSize:12,letterSpacing:-1}}>{"★".repeat(best(s.id))}</span>}
+                        {done(s.id) && <span style={{color:C.ok,fontSize:14}}>✅</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     );
   }
 
   // ── Compose / result ──
+  const fld = folderOf(sc);
   const canSend = text.trim() && !loading;
+  const nextInFolder = SCENARIOS.filter(x=>x.folder===sc.folder).find(x=>x.id!==sc.id && !done(x.id));
   return (
     <div className="fade-in" style={{padding:"16px 20px"}}>
       <button onClick={()=>{setSc(null);reset();}}
         style={{...baseBtn,background:"transparent",color:C.muted,padding:"4px 0",fontSize:13,marginBottom:12}}>← シナリオ一覧</button>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,gap:8}}>
         <span style={{color:C.cream,fontWeight:600,fontSize:16}}>{sc.t}</span>
-        <span style={{background:CAT_C[sc.cat],color:"white",padding:"2px 8px",borderRadius:20,fontSize:11}}>{CAT_L[sc.cat]}</span>
+        <span style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
+          <span style={{background:DIFFS[sc.diff].color,color:"white",padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:600}}>{DIFFS[sc.diff].label}</span>
+          <span style={{background:fld.color,color:"white",padding:"2px 8px",borderRadius:20,fontSize:11}}>{fld.icon} {fld.name}</span>
+        </span>
       </div>
       <div style={{color:C.lilac,fontSize:13,lineHeight:1.6,marginBottom:14,padding:"12px 14px",background:C.card,borderRadius:10}}>{sc.s}</div>
       <div style={{fontSize:12,color:C.muted,marginBottom:8}}>次の単語・表現をすべて使ってください:</div>
@@ -1515,6 +1644,23 @@ function ComposeMode({ onSolved }) {
               <div style={{fontSize:15,fontStyle:"italic",lineHeight:1.6,color:C.lilac}}>{result.improved}</div>
             </div>
           )}
+          <div style={{display:"flex",gap:10,marginTop:4}}>
+            <button onClick={reset}
+              style={{...baseBtn,flex:1,background:C.card,color:C.lav,border:"1px solid "+C.bdr,padding:"13px 0",fontSize:14,fontWeight:600}}>
+              もう一度書く ↻
+            </button>
+            {nextInFolder ? (
+              <button onClick={()=>{setSc(nextInFolder);reset();}} className="main-btn"
+                style={{...baseBtn,flex:1,background:C.btnGrad,color:ON_ACCENT,padding:"13px 0",fontSize:14,fontWeight:600}}>
+                次のシナリオ →
+              </button>
+            ) : (
+              <button onClick={()=>{setSc(null);reset();}} className="main-btn"
+                style={{...baseBtn,flex:1,background:C.btnGrad,color:ON_ACCENT,padding:"13px 0",fontSize:14,fontWeight:600}}>
+                別のフォルダを選ぶ
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
