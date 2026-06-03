@@ -1808,58 +1808,58 @@ function DiagnosticTest({ onComplete, onSkip }) {
   const [writeResult, setWriteResult] = useState(null);
   const [partScores, setPartScores] = useState({ vocab:[], biz:[], grammar:[], write:null });
 
-  // Store current question and shuffled choices in state to prevent re-shuffle on re-render
-  const [currentQ, setCurrentQ] = useState(null);
-  const [choices, setChoices] = useState([]);
-  const answersRef = useRef(answers);
-  const curLvRef = useRef(curLv);
-  answersRef.current = answers;
-  curLvRef.current = curLv;
+  // Cache questions and choices per step to avoid re-generation/re-shuffle on re-render
+  const questionsCache = useRef({});
 
-  // Generate question when step changes
-  useEffect(() => {
-    if (step >= 1 && step <= 13) {
-      const lv = curLvRef.current;
-      const ans = answersRef.current;
-      let q;
-      if (step <= 5) {
-        // Part 1: Vocabulary
-        const pool = DIAG_VOCAB.filter(x => Math.abs(x.lv - lv) <= 1);
-        const unused = pool.filter(x => !ans.find(a => a.q === x.q));
-        q = { part:1, ...(unused[0] || pool[0]) };
-      } else if (step <= 9) {
-        // Part 2: Business expressions
-        const pool = DIAG_BIZ.filter(x => Math.abs(x.lv - lv) <= 1);
-        const unused = pool.filter(x => !ans.find(a => a.q === x.q));
-        q = { part:2, ...(unused[0] || pool[0]) };
-      } else if (step <= 12) {
-        // Part 3: Grammar
-        const pool = DIAG_GRAMMAR.filter(x => Math.abs(x.lv - lv) <= 1);
-        const unused = pool.filter(x => !ans.find(a => a.q === x.q));
-        q = { part:3, ...(unused[0] || pool[0]) };
-      } else {
-        // Part 4: Production (writing)
-        q = { part:4, ...DIAG_WRITE[0] };
-      }
-      setCurrentQ(q);
-      if (q && q.a) {
-        setChoices(shuffle([q.a, ...q.wrong]));
-      } else {
-        setChoices([]);
-      }
-    } else {
-      setCurrentQ(null);
-      setChoices([]);
+  // Generate question for a given step (cached in ref to avoid re-shuffling)
+  const getQuestionForStep = (stepNum, answersArr, level) => {
+    // Return cached if already generated for this step
+    if (questionsCache.current[stepNum]) {
+      return questionsCache.current[stepNum];
     }
-  }, [step]);
+
+    if (stepNum < 1 || stepNum > 13) {
+      return { q: null, choices: [] };
+    }
+
+    let q;
+    if (stepNum <= 5) {
+      // Part 1: Vocabulary
+      const pool = DIAG_VOCAB.filter(x => Math.abs(x.lv - level) <= 1);
+      const unused = pool.filter(x => !answersArr.find(a => a.q === x.q));
+      q = { part:1, ...(unused[0] || pool[0]) };
+    } else if (stepNum <= 9) {
+      // Part 2: Business expressions
+      const pool = DIAG_BIZ.filter(x => Math.abs(x.lv - level) <= 1);
+      const unused = pool.filter(x => !answersArr.find(a => a.q === x.q));
+      q = { part:2, ...(unused[0] || pool[0]) };
+    } else if (stepNum <= 12) {
+      // Part 3: Grammar
+      const pool = DIAG_GRAMMAR.filter(x => Math.abs(x.lv - level) <= 1);
+      const unused = pool.filter(x => !answersArr.find(a => a.q === x.q));
+      q = { part:3, ...(unused[0] || pool[0]) };
+    } else {
+      // Part 4: Production (writing)
+      q = { part:4, ...DIAG_WRITE[0] };
+    }
+
+    const choices = q && q.a ? shuffle([q.a, ...q.wrong]) : [];
+    const result = { q, choices };
+    questionsCache.current[stepNum] = result;
+    return result;
+  };
+
+  // Get current question and choices - computed synchronously during render
+  const { q: currentQ, choices } = step >= 1 && step <= 13
+    ? getQuestionForStep(step, answers, curLv)
+    : { q: null, choices: [] };
 
   const handleSelect = (choice) => {
     if (selected !== null) return;
     setSelected(choice);
     const correct = choice === currentQ.a;
-    const newAnswers = [...answersRef.current, { q: currentQ.q, lv: currentQ.lv, correct, part: currentQ.part }];
+    const newAnswers = [...answers, { q: currentQ.q, lv: currentQ.lv, correct, part: currentQ.part }];
     setAnswers(newAnswers);
-    answersRef.current = newAnswers;
     // Update part scores
     const ps = { ...partScores };
     if (currentQ.part === 1) ps.vocab = [...ps.vocab, { lv: currentQ.lv, correct }];
@@ -1867,9 +1867,10 @@ function DiagnosticTest({ onComplete, onSkip }) {
     else if (currentQ.part === 3) ps.grammar = [...ps.grammar, { lv: currentQ.lv, correct }];
     setPartScores(ps);
     // CAT: adjust difficulty
-    const newLv = correct ? Math.min(6, curLvRef.current + 1) : Math.max(1, curLvRef.current - 1);
+    const newLv = correct ? Math.min(6, curLv + 1) : Math.max(1, curLv - 1);
     setCurLv(newLv);
-    curLvRef.current = newLv;
+    // Clear cache for next step so it generates with new difficulty level
+    delete questionsCache.current[step + 1];
   };
 
   const handleNext = () => {
