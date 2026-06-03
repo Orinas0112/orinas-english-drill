@@ -10,6 +10,7 @@
 <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #110A14; color: #F5F0F3; font-family: 'Noto Sans JP', sans-serif; -webkit-font-smoothing: antialiased; }
@@ -759,11 +760,29 @@ function checkTyped(input, word) {
   return m[a.length][b.length] <= Math.max(1, Math.floor(core.length * 0.25));
 }
 
-function selectWords(vocab, mastery, count, catFilter) {
+function selectWords(vocab, mastery, count, catFilter, diagnostic) {
   count = count || 10;
   catFilter = catFilter || "all";
   let pool = catFilter === "all" ? vocab.slice() : vocab.filter(v => v.c === catFilter);
   if (pool.length === 0) pool = vocab.slice();
+
+  // Personalization based on diagnostic results
+  if (diagnostic && catFilter === "all") {
+    const level = cefrToNum(diagnostic.overall);
+    if (level >= 4) {
+      // Advanced users: reduce basic (c) category, increase advanced (a) and tough (t)
+      const advanced = pool.filter(v => v.c === "a" || v.c === "t");
+      const others = pool.filter(v => v.c !== "a" && v.c !== "t" && v.c !== "c");
+      const basic = pool.filter(v => v.c === "c").slice(0, Math.floor(pool.filter(v => v.c === "c").length * 0.3));
+      pool = [...advanced, ...others, ...basic];
+    } else if (level <= 2) {
+      // Beginners: prioritize basic (c, bg) categories
+      const basic = pool.filter(v => v.c === "c" || v.c === "bg");
+      const others = pool.filter(v => v.c !== "c" && v.c !== "bg").slice(0, Math.floor(pool.length * 0.3));
+      pool = [...basic, ...others];
+    }
+  }
+
   const scored = pool.map(v => ({ ...v, score: mastery[v.w] || 0 }));
   scored.sort((a,b) => a.score - b.score || Math.random() - 0.5);
   return scored.slice(0, Math.min(count, scored.length));
@@ -935,6 +954,20 @@ function loadCompose() {
   catch(e) { return {}; }
 }
 function saveCompose(c) { try { localStorage.setItem('orinas-compose-v1', JSON.stringify(c)); } catch(e) {} }
+
+// ── Diagnostic result ──
+function loadDiagnostic() {
+  try { const r = localStorage.getItem('orinas-diag-v1'); return r ? JSON.parse(r) : null; }
+  catch(e) { return null; }
+}
+function saveDiagnostic(d) { try { localStorage.setItem('orinas-diag-v1', JSON.stringify(d)); } catch(e) {} }
+function clearDiagnostic() { try { localStorage.removeItem('orinas-diag-v1'); } catch(e) {} }
+
+// CEFR level utilities
+const CEFR_LEVELS = ["A1","A2","B1","B2","C1","C2"];
+const CEFR_TOEIC = { A1:"〜220", A2:"225〜545", B1:"550〜780", B2:"785〜940", C1:"945〜990", C2:"990+" };
+function cefrToNum(cefr) { return CEFR_LEVELS.indexOf(cefr); }
+function numToCefr(n) { return CEFR_LEVELS[Math.max(0,Math.min(5,Math.round(n)))]; }
 // Each test receives the live stats object and returns true once unlocked.
 const ACH = [
   { id:"first_step",   icon:"🌟",   name:"First Step",     desc:"初めて正解した",            test:s=>s.correctTotal>=1 },
@@ -949,6 +982,81 @@ const ACH = [
   { id:"dedicated",    icon:"🔥🔥",  name:"Dedicated",      desc:"7日連続で学習",            test:s=>s.streak>=7 },
   { id:"unstoppable",  icon:"🔥🔥🔥", name:"Unstoppable",    desc:"30日連続で学習",           test:s=>s.streak>=30 },
   { id:"sharpshooter", icon:"🎯",   name:"Sharpshooter",   desc:"20問連続正解",             test:s=>s.consecutiveCorrect>=20 },
+];
+
+// ═══════════════════ DIAGNOSTIC TEST DATA ═══════════════════
+// CAT-style adaptive test: 13 questions across 4 parts
+// Part1: Vocabulary (5 Q), Part2: Business expressions (4 Q), Part3: Grammar (3 Q), Part4: Production (1 Q)
+// Each question has difficulty 1-6 (maps to A1-C2)
+
+const DIAG_VOCAB = [
+  // Level 1 (A1) - 3 questions
+  { q:"\"meeting\" の意味は？", a:"会議", wrong:["会計","契約","締切"], lv:1 },
+  { q:"\"email\" の意味は？", a:"電子メール", wrong:["電話","書類","名刺"], lv:1 },
+  { q:"\"schedule\" の意味は？", a:"予定", wrong:["場所","費用","書類"], lv:1 },
+  // Level 2 (A2) - 3 questions
+  { q:"\"deadline\" の意味は？", a:"締切", wrong:["取引先","予算","議題"], lv:2 },
+  { q:"\"budget\" の意味は？", a:"予算", wrong:["契約","報告","承認"], lv:2 },
+  { q:"\"confirm\" の意味は？", a:"確認する", wrong:["拒否する","延長する","変更する"], lv:2 },
+  // Level 3 (B1) - 3 questions
+  { q:"\"align\" の意味は？", a:"認識を合わせる", wrong:["反対する","延期する","報告する"], lv:3 },
+  { q:"\"prioritize\" の意味は？", a:"優先する", wrong:["却下する","延期する","記録する"], lv:3 },
+  { q:"\"escalate\" の意味は？", a:"上位に引き上げる", wrong:["縮小する","中断する","復旧する"], lv:3 },
+  // Level 4 (B2) - 3 questions
+  { q:"\"bottleneck\" の意味は？", a:"ボトルネック・律速", wrong:["突破口","転換点","出発点"], lv:4 },
+  { q:"\"de-risk\" の意味は？", a:"リスクを下げる", wrong:["危険を冒す","投資する","撤退する"], lv:4 },
+  { q:"\"trade-off\" の意味は？", a:"取捨選択", wrong:["完全一致","相互依存","強制終了"], lv:4 },
+  // Level 5 (C1) - 3 questions
+  { q:"\"table-stakes\" の意味は？", a:"参入の最低条件", wrong:["最終目標","追加報酬","交渉材料"], lv:5 },
+  { q:"\"scope creep\" の意味は？", a:"範囲が際限なく膨らむ", wrong:["予算超過","人員不足","品質低下"], lv:5 },
+  { q:"\"north star\" の意味は？", a:"最上位の指標", wrong:["短期目標","副次指標","参考数値"], lv:5 },
+  // Level 6 (C2) - 3 questions
+  { q:"\"sunk cost fallacy\" の意味は？", a:"埋没費用の誤謬", wrong:["機会費用","限界費用","固定費用"], lv:6 },
+  { q:"\"force majeure\" の意味は？", a:"不可抗力", wrong:["強制執行","最終判断","優先権"], lv:6 },
+  { q:"\"indemnify\" の意味は？", a:"補償する", wrong:["告発する","拘束する","仲裁する"], lv:6 },
+];
+
+const DIAG_BIZ = [
+  // Level 1-2 (A1-A2) - similar length, natural alternatives
+  { q:"同僚に資料送付を依頼する最も適切な表現は？", a:"Could you send me the file?", wrong:["Can you give me that file?","Would you get me that file?","Will you hand me the file?"], lv:2 },
+  { q:"会議の日程を確認する適切な表現は？", a:"Just to confirm, is Friday okay?", wrong:["Friday is the day, right?","We meet on Friday, correct?","Friday works for you, yes?"], lv:2 },
+  { q:"同僚に感謝を伝える自然な表現は？", a:"Thanks, I appreciate it.", wrong:["Thank you very kindly.","I'm grateful to you much.","Thanks for doing that thing."], lv:1 },
+  // Level 3 (B1) - similar complexity, subtle differences
+  { q:"会議で議題を戻す丁寧な表現は？", a:"Let's circle back to the main topic.", wrong:["Let's return back to that point.","Can we go to the first topic?","We should discuss that again."], lv:3 },
+  { q:"相手の意見に同意を示す適切な表現は？", a:"That makes sense, I'm on board.", wrong:["I think so too about that.","I'm agreeable with your view.","Your point sounds reasonable to me."], lv:3 },
+  { q:"進捗を報告する際の適切な表現は？", a:"Just giving you a heads up.", wrong:["I am informing you now.","Let me tell you something.","Here is the information for you."], lv:3 },
+  // Level 4 (B2) - professional nuances
+  { q:"提案に反対するとき最も適切な表現は？", a:"I see your point, but let me offer another perspective.", wrong:["That's an interesting idea, though I have some concerns.", "I understand, but I think we should consider alternatives.", "Your suggestion is noted, but I'd like to propose something."], lv:4 },
+  { q:"フィードバックを求める適切な表現は？", a:"I'd appreciate your input on this.", wrong:["Please give me your feedback here.","I would like your comments about it.","Could you share your thoughts on this?"], lv:4 },
+  { q:"ミスを謝罪する適切な表現は？", a:"That's on me, I should have caught it.", wrong:["I apologize for the error I made.","Sorry about that mistake I did.","I take responsibility for this issue."], lv:4 },
+  // Level 5 (C1) - nuanced professional language
+  { q:"クライアントへの値上げを伝える最も適切な表現は？", a:"We're proposing a modest adjustment to reflect our enhanced value.", wrong:["We'd like to revise our pricing to better align with market rates.","We're implementing a small increase based on our improved services.","We need to adjust our fees to match our expanded offerings."], lv:5 },
+  { q:"厳しいフィードバックを伝える適切な表現は？", a:"I need to be direct with you about some areas for improvement.", wrong:["I want to share some constructive criticism with you today.","There are several points we should discuss about your work.","I have some honest feedback to share regarding your performance."], lv:5 },
+  // Level 6 (C2) - highly nuanced diplomatic language
+  { q:"契約非更新を伝える最も慎重な表現は？", a:"After careful consideration, we've decided to part ways amicably.", wrong:["We've concluded that ending our partnership would be best for both.","Following a thorough review, we believe it's time to move forward.","Upon reflection, we feel this arrangement has run its course."], lv:6 },
+  { q:"難しい交渉で妥協点を探る適切な表現は？", a:"I believe there's room for us to find common ground here.", wrong:["Perhaps we could explore some middle territory on this matter.","I think we can work together to find a solution that works.","There might be an opportunity to bridge our differences."], lv:6 },
+];
+
+const DIAG_GRAMMAR = [
+  // Level 2 (A2) - 2 questions
+  { q:"正しい文を選んでください:", a:"She has been working here for five years.", wrong:["She is working here since five years.","She works here from five years.","She has been work here for five years."], lv:2 },
+  { q:"空欄に入る適切なものは？ \"I ___ to the meeting yesterday.\"", a:"went", wrong:["have gone","was going","had went"], lv:2 },
+  // Level 3 (B1) - 2 questions
+  { q:"空欄に入る最も適切なものは？ \"If I ___ earlier, I would have caught the train.\"", a:"had left", wrong:["left","would leave","have left"], lv:3 },
+  { q:"空欄に入る適切なものは？ \"By the time you arrive, I ___ the report.\"", a:"will have finished", wrong:["will finish","have finished","finished"], lv:3 },
+  // Level 4 (B2) - 2 questions
+  { q:"正しい文を選んでください:", a:"The report, which was submitted yesterday, needs revision.", wrong:["The report which was submitted yesterday, needs revision.","The report, which was submitted yesterday needs revision.","The report which, was submitted yesterday, needs revision."], lv:4 },
+  { q:"空欄に入る適切なものは？ \"The manager insisted that he ___ present.\"", a:"be", wrong:["is","was","would be"], lv:4 },
+  // Level 5 (C1) - 2 questions
+  { q:"空欄に入る最も適切なものは？ \"Not only ___ the deadline, but she also exceeded expectations.\"", a:"did she meet", wrong:["she met","she did meet","met she"], lv:5 },
+  { q:"空欄に入る適切なものは？ \"Had I known about the issue, I ___ it sooner.\"", a:"would have addressed", wrong:["would address","have addressed","addressed"], lv:5 },
+  // Level 6 (C2) - 2 questions
+  { q:"文法的に正しく、かつ最もフォーマルな表現は？", a:"Were the board to approve, we would proceed immediately.", wrong:["If the board would approve, we proceed immediately.","Should the board approves, we will proceed immediately.","If the board will approve, we would proceed immediately."], lv:6 },
+  { q:"空欄に入る最もフォーマルな表現は？ \"___, the proposal would merit further consideration.\"", a:"Were the circumstances different", wrong:["If the circumstances are different","Should circumstances be different","When circumstances differ"], lv:6 },
+];
+
+const DIAG_WRITE = [
+  { q:"You need to postpone a meeting with a client due to an urgent matter. Write a brief, professional email (2-3 sentences) apologizing and proposing a new time.", lv:3 },
 ];
 
 // ═══════════════════ TEXT-TO-SPEECH BUTTON ═══════════════════
@@ -1009,7 +1117,7 @@ function ResumeDialog({ answered, total, onResume, onNew }) {
 }
 
 // ═══════════════════ QUIZ MODE ═══════════════════
-function QuizMode({ vocab, mastery, onAnswer, onCombo, onPerfect, catFilter }) {
+function QuizMode({ vocab, mastery, onAnswer, onCombo, onPerfect, catFilter, diagnostic }) {
   const [questions, setQuestions] = useState([]);
   const [idx, setIdx] = useState(0);
   const [selected, setSelected] = useState(null);
@@ -1020,7 +1128,7 @@ function QuizMode({ vocab, mastery, onAnswer, onCombo, onPerfect, catFilter }) {
   const firstRef = useRef(true);
 
   const initNew = () => {
-    const sel = selectWords(vocab, mastery, 10, catFilter);
+    const sel = selectWords(vocab, mastery, 10, catFilter, diagnostic);
     const qs = sel.map(v => {
       const d = Math.random() > 0.5 ? "jp" : "en";
       const wrong = pickWrong(v, vocab);
@@ -1133,7 +1241,7 @@ function QuizMode({ vocab, mastery, onAnswer, onCombo, onPerfect, catFilter }) {
 }
 
 // ═══════════════════ TYPE MODE ═══════════════════
-function TypeMode({ vocab, mastery, onAnswer, onCombo, onPerfect, catFilter }) {
+function TypeMode({ vocab, mastery, onAnswer, onCombo, onPerfect, catFilter, diagnostic }) {
   const [questions, setQuestions] = useState([]);
   const [idx, setIdx] = useState(0);
   const [input, setInput] = useState("");
@@ -1147,7 +1255,7 @@ function TypeMode({ vocab, mastery, onAnswer, onCombo, onPerfect, catFilter }) {
   const firstRef = useRef(true);
 
   const initNew = () => {
-    const sel = selectWords(vocab, mastery, 10, catFilter);
+    const sel = selectWords(vocab, mastery, 10, catFilter, diagnostic);
     clearSession('type'); setResume(null); setCombo(0);
     setQuestions(sel); setIdx(0); setInput(""); setChecked(null); setHintLv(0); setResults([]); setDone(false);
   };
@@ -1275,7 +1383,7 @@ function TypeMode({ vocab, mastery, onAnswer, onCombo, onPerfect, catFilter }) {
 }
 
 // ═══════════════════ STATS VIEW ═══════════════════
-function StatsView({ vocab, mastery, daily, calendar, xp, ach, onReset }) {
+function StatsView({ vocab, mastery, daily, calendar, xp, ach, diagnostic, onReset, onRetakeDiag }) {
   const lv = levelInfo(xp || 0);
   const curIdx = lv.lvNum - 1;
   const total=vocab.length;
@@ -1293,9 +1401,50 @@ function StatsView({ vocab, mastery, daily, calendar, xp, ach, onReset }) {
 
   const weak=vocab.filter(v=>{const m=mastery[v.w]||0;return m>0&&m<3;}).sort((a,b)=>(mastery[a.w]||0)-(mastery[b.w]||0)).slice(0,10);
 
+  // Check if re-diagnosis is due (14 days)
+  const diagDue = diagnostic && diagnostic.date && (() => {
+    const d = new Date(diagnostic.date);
+    const now = new Date();
+    const diff = Math.floor((now - d) / (1000 * 60 * 60 * 24));
+    return diff >= 14;
+  })();
+
   return (
     <div className="fade-in" style={{padding:"16px 20px"}}>
       <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:22,fontWeight:700,marginBottom:20}}>Progress</div>
+
+      {/* CEFR Level & Radar (from diagnostic) */}
+      {diagnostic && (
+        <div className="glass" style={{...glassSx(14),padding:"16px",marginBottom:20}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+            <span style={{fontSize:13,color:C.muted}}>あなたの英語力</span>
+            <span style={{fontSize:11,color:C.muted}}>診断日: {diagnostic.date}</span>
+          </div>
+          <div style={{display:"flex",gap:16,alignItems:"center"}}>
+            <div style={{textAlign:"center",minWidth:80}}>
+              <div className="txt-glow" style={{fontSize:36,fontWeight:700,color:C.lav}}>{diagnostic.overall}</div>
+              <div style={{fontSize:11,color:C.muted}}>TOEIC {CEFR_TOEIC[diagnostic.overall]}</div>
+            </div>
+            <div style={{flex:1}}><MiniRadarChart result={diagnostic} /></div>
+          </div>
+          {diagDue && (
+            <div style={{marginTop:12,padding:"10px 12px",background:"rgba(240,200,80,0.1)",borderRadius:8,border:"1px solid "+C.gold}}>
+              <div style={{fontSize:13,color:C.gold,fontWeight:600}}>💡 レベルチェックしませんか？</div>
+              <div style={{fontSize:12,color:C.muted,marginTop:4}}>前回の診断から14日以上経過しました。</div>
+              <button onClick={onRetakeDiag} className="main-btn"
+                style={{...baseBtn,background:C.btnGrad,color:ON_ACCENT,padding:"10px 0",fontSize:13,width:"100%",marginTop:10}}>
+                再診断する
+              </button>
+            </div>
+          )}
+          {!diagDue && onRetakeDiag && (
+            <button onClick={onRetakeDiag}
+              style={{...baseBtn,background:"transparent",border:"1px solid "+C.bdr,color:C.muted,padding:"8px 0",fontSize:12,width:"100%",marginTop:12}}>
+              再診断する
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Today's summary */}
       <div style={{marginBottom:24}}>
@@ -1667,6 +1816,502 @@ function ComposeMode({ onSolved }) {
   );
 }
 
+// ═══════════════════ DIAGNOSTIC TEST ═══════════════════
+function DiagnosticTest({ onComplete, onSkip }) {
+  const [step, setStep] = useState(0); // 0=intro, 1-13=questions, 14=evaluating, 15=done
+  const [answers, setAnswers] = useState([]);
+  const [curLv, setCurLv] = useState(3); // CAT adaptive level (1-6)
+  const [selected, setSelected] = useState(null);
+  const [writeText, setWriteText] = useState("");
+  const [writeLoading, setWriteLoading] = useState(false);
+  const [writeResult, setWriteResult] = useState(null);
+  const [partScores, setPartScores] = useState({ vocab:[], biz:[], grammar:[], write:null });
+
+  // Cache questions and choices per step to avoid re-generation/re-shuffle on re-render
+  const questionsCache = useRef({});
+  // Track used questions globally to prevent duplicates across all steps
+  const usedQuestionsRef = useRef(new Set());
+
+  // Generate question for a given step (cached in ref to avoid re-shuffling)
+  const getQuestionForStep = (stepNum, answersArr, level) => {
+    // Return cached if already generated for this step
+    if (questionsCache.current[stepNum]) {
+      return questionsCache.current[stepNum];
+    }
+
+    if (stepNum < 1 || stepNum > 13) {
+      return { q: null, choices: [] };
+    }
+
+    const usedQuestions = usedQuestionsRef.current;
+
+    // Select an unused question, expanding level range if needed
+    const selectUnused = (pool, part) => {
+      // First filter out already used questions
+      const unused = pool.filter(x => !usedQuestions.has(x.q));
+      // Prefer questions at target level, then expand range
+      let candidates = unused.filter(x => x.lv === level);
+      if (candidates.length === 0) candidates = unused.filter(x => Math.abs(x.lv - level) <= 1);
+      if (candidates.length === 0) candidates = unused.filter(x => Math.abs(x.lv - level) <= 2);
+      if (candidates.length === 0) candidates = unused; // any unused
+      if (candidates.length === 0) candidates = pool; // last resort: allow repeat
+      // Shuffle and pick first to add randomness
+      const picked = shuffle(candidates)[0];
+      if (picked) usedQuestions.add(picked.q);
+      return { part, ...picked };
+    };
+
+    let q;
+    if (stepNum <= 5) {
+      q = selectUnused(DIAG_VOCAB, 1);
+    } else if (stepNum <= 9) {
+      q = selectUnused(DIAG_BIZ, 2);
+    } else if (stepNum <= 12) {
+      q = selectUnused(DIAG_GRAMMAR, 3);
+    } else {
+      q = { part:4, ...DIAG_WRITE[0] };
+    }
+
+    const choices = q && q.a ? shuffle([q.a, ...q.wrong]) : [];
+    const result = { q, choices };
+    questionsCache.current[stepNum] = result;
+    return result;
+  };
+
+  // Get current question and choices - computed synchronously during render
+  const { q: currentQ, choices } = step >= 1 && step <= 13
+    ? getQuestionForStep(step, answers, curLv)
+    : { q: null, choices: [] };
+
+  const handleSelect = (choice) => {
+    if (selected !== null) return;
+    setSelected(choice);
+    const correct = choice === currentQ.a;
+    const newAnswers = [...answers, { q: currentQ.q, lv: currentQ.lv, correct, part: currentQ.part }];
+    setAnswers(newAnswers);
+    // Update part scores
+    const ps = { ...partScores };
+    if (currentQ.part === 1) ps.vocab = [...ps.vocab, { lv: currentQ.lv, correct }];
+    else if (currentQ.part === 2) ps.biz = [...ps.biz, { lv: currentQ.lv, correct }];
+    else if (currentQ.part === 3) ps.grammar = [...ps.grammar, { lv: currentQ.lv, correct }];
+    setPartScores(ps);
+    // CAT: adjust difficulty
+    const newLv = correct ? Math.min(6, curLv + 1) : Math.max(1, curLv - 1);
+    setCurLv(newLv);
+    // Clear cache for next step so it generates with new difficulty level
+    delete questionsCache.current[step + 1];
+  };
+
+  const handleNext = () => {
+    setSelected(null);
+    setStep(step + 1);
+  };
+
+  const handleWriteSubmit = async () => {
+    if (!writeText.trim() || writeLoading) return;
+    setWriteLoading(true);
+    try {
+      const res = await fetch("/api/evaluate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          scenario: "Diagnostic: " + DIAG_WRITE[0].q,
+          words: [],
+          text: writeText,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      const rating = data.rating || 2;
+      setWriteResult(data);
+      setPartScores(ps => ({ ...ps, write: { rating, text: writeText } }));
+    } catch (e) {
+      setPartScores(ps => ({ ...ps, write: { rating: 2, text: writeText } }));
+    } finally {
+      setWriteLoading(false);
+    }
+  };
+
+  const calculateResults = () => {
+    // Calculate CEFR for each skill (average level of correct answers, weighted)
+    const calcSkill = (arr) => {
+      if (!arr || arr.length === 0) return 3;
+      const correct = arr.filter(a => a.correct);
+      if (correct.length === 0) return Math.max(1, arr[0].lv - 1);
+      return correct.reduce((sum, a) => sum + a.lv, 0) / correct.length;
+    };
+    const vocabScore = calcSkill(partScores.vocab);
+    const bizScore = calcSkill(partScores.biz);
+    const grammarScore = calcSkill(partScores.grammar);
+    const writeScore = partScores.write ? Math.min(6, (partScores.write.rating / 5) * 6) : 3;
+    const overall = (vocabScore + bizScore + grammarScore + writeScore) / 4;
+    return {
+      overall: numToCefr(overall),
+      overallNum: overall,
+      vocab: numToCefr(vocabScore),
+      vocabNum: vocabScore,
+      biz: numToCefr(bizScore),
+      bizNum: bizScore,
+      grammar: numToCefr(grammarScore),
+      grammarNum: grammarScore,
+      write: numToCefr(writeScore),
+      writeNum: writeScore,
+      date: todayKey(),
+    };
+  };
+
+  const finishTest = () => {
+    const results = calculateResults();
+    saveDiagnostic(results);
+    onComplete(results);
+  };
+
+  // Intro screen
+  if (step === 0) {
+    return (
+      <div className="fade-in" style={{padding:"24px 20px",textAlign:"center"}}>
+        <div style={{fontSize:56,marginBottom:16}}>📋</div>
+        <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:24,fontWeight:700,marginBottom:12}}>英語力診断テスト</div>
+        <div style={{color:C.muted,fontSize:14,lineHeight:1.7,marginBottom:24}}>
+          13問の適応型テストであなたの英語力を診断します。<br/>
+          正解すると難易度が上がり、不正解だと下がります。<br/>
+          所要時間: 約5〜10分
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
+          {[
+            {icon:"📚",label:"Part 1: 語彙力",n:"5問"},
+            {icon:"💬",label:"Part 2: ビジネス表現",n:"4問"},
+            {icon:"✏️",label:"Part 3: 文法",n:"3問"},
+            {icon:"📝",label:"Part 4: 産出力",n:"1問"},
+          ].map((p,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",background:C.card,borderRadius:10,textAlign:"left"}}>
+              <span style={{fontSize:24}}>{p.icon}</span>
+              <span style={{flex:1,color:C.cream}}>{p.label}</span>
+              <span style={{color:C.muted,fontSize:13}}>{p.n}</span>
+            </div>
+          ))}
+        </div>
+        <button onClick={()=>setStep(1)} className="main-btn"
+          style={{...baseBtn,background:C.btnGrad,color:ON_ACCENT,padding:"16px 0",fontSize:16,width:"100%",marginBottom:12}}>
+          診断を開始する
+        </button>
+        {onSkip && (
+          <button onClick={onSkip} style={{...baseBtn,background:"transparent",color:C.muted,padding:"12px 0",fontSize:14,width:"100%"}}>
+            スキップして学習を始める
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // Writing question (Part 4)
+  if (step === 13 && currentQ && currentQ.part === 4) {
+    return (
+      <div className="fade-in" style={{padding:"16px 20px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+          <span style={{color:C.muted,fontSize:14}}>13 / 13</span>
+          <span style={{background:C.dusty,color:"white",padding:"3px 12px",borderRadius:20,fontSize:12}}>Part 4: 産出力</span>
+        </div>
+        <div style={{height:6,background:C.card,borderRadius:3,overflow:"hidden",marginBottom:24}}>
+          <div style={{height:"100%",width:"100%",background:C.btnGrad,transition:"width 0.3s"}} />
+        </div>
+        <div style={{color:C.lilac,fontSize:15,lineHeight:1.7,marginBottom:20,padding:"16px",background:C.card,borderRadius:12}}>
+          {currentQ.q}
+        </div>
+        <textarea value={writeText} onChange={e=>setWriteText(e.target.value)} disabled={writeLoading || writeResult}
+          placeholder="Write your response here..."
+          rows={5}
+          style={{width:"100%",padding:"14px 16px",borderRadius:12,border:"1.5px solid "+C.bdr,
+            background:C.card,color:C.cream,fontSize:15,outline:"none",resize:"vertical",lineHeight:1.6,marginBottom:16}} />
+        {!writeResult && (
+          <button onClick={handleWriteSubmit} disabled={!writeText.trim() || writeLoading} className="main-btn"
+            style={{...baseBtn,background:writeText.trim()&&!writeLoading?C.btnGrad:C.card,
+              color:writeText.trim()&&!writeLoading?ON_ACCENT:C.muted,padding:"14px 0",fontSize:15,width:"100%"}}>
+            {writeLoading ? "評価中..." : "回答を送信"}
+          </button>
+        )}
+        {writeResult && (
+          <div className="fade-in" style={{marginTop:16}}>
+            <div style={{textAlign:"center",padding:16,background:C.card,borderRadius:12,marginBottom:16}}>
+              <div style={{fontSize:13,color:C.muted,marginBottom:8}}>スコア</div>
+              <div style={{fontSize:36,fontWeight:700,color:C.gold}}>{writeResult.rating || 2} / 5</div>
+            </div>
+            {writeResult.improved && (
+              <div style={{padding:14,background:C.card,borderRadius:10,borderLeft:"3px solid "+C.lav,marginBottom:16}}>
+                <div style={{fontSize:12,color:C.muted,marginBottom:6}}>改善例</div>
+                <div style={{fontSize:14,fontStyle:"italic",color:C.lilac,lineHeight:1.6}}>{writeResult.improved}</div>
+              </div>
+            )}
+            <button onClick={finishTest} className="main-btn"
+              style={{...baseBtn,background:C.btnGrad,color:ON_ACCENT,padding:"14px 0",fontSize:15,width:"100%"}}>
+              結果を見る →
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Multiple choice questions (Parts 1-3)
+  if (currentQ && currentQ.a) {
+    const partLabels = {1:"Part 1: 語彙力",2:"Part 2: ビジネス表現",3:"Part 3: 文法"};
+    const progress = (step / 13) * 100;
+    return (
+      <div key={step} className="q-anim" style={{padding:"16px 20px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+          <span style={{color:C.muted,fontSize:14}}>{step} / 13</span>
+          <span style={{background:C.dusty,color:"white",padding:"3px 12px",borderRadius:20,fontSize:12}}>{partLabels[currentQ.part]}</span>
+        </div>
+        <div style={{height:6,background:C.card,borderRadius:3,overflow:"hidden",marginBottom:24}}>
+          <div style={{height:"100%",width:progress+"%",background:C.btnGrad,transition:"width 0.3s"}} />
+        </div>
+        <div style={{textAlign:"center",marginBottom:28}}>
+          <div style={{color:C.muted,fontSize:12,marginBottom:8}}>難易度: {["","A1","A2","B1","B2","C1","C2"][currentQ.lv]}</div>
+          <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:18,fontWeight:600,lineHeight:1.5,color:C.cream}}>
+            {currentQ.q}
+          </div>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {choices.map((ch) => {
+            const answered = selected !== null;
+            const isSelected = answered && selected === ch;
+            const isCorrect = answered && ch === currentQ.a;
+            let bg = C.card, bdr = C.bdr;
+            if (answered) {
+              if (isCorrect) { bg = "rgba(110,203,115,0.15)"; bdr = C.ok; }
+              else if (isSelected) { bg = "rgba(232,112,112,0.15)"; bdr = C.ng; }
+            }
+            return (
+              <button key={ch} disabled={answered}
+                className={"choice-btn " + (isSelected ? (isCorrect ? "pulse" : "shake") : "")}
+                onClick={() => handleSelect(ch)}
+                style={{...baseBtn,background:bg,border:"1.5px solid "+bdr,padding:"14px 16px",fontSize:15,color:C.cream,textAlign:"left",width:"100%"}}>
+                {ch}
+              </button>
+            );
+          })}
+        </div>
+        {selected !== null && (
+          <div style={{textAlign:"center",marginTop:24}}>
+            <button onClick={handleNext} className="main-btn"
+              style={{...baseBtn,background:C.btnGrad,color:ON_ACCENT,padding:"12px 28px",fontSize:15}}>
+              {step < 13 ? "Next →" : "Part 4 へ →"}
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return null;
+}
+
+// ═══════════════════ DIAGNOSTIC RESULT SCREEN ═══════════════════
+function DiagnosticResult({ result, prevResult, onClose, onRetake }) {
+  const chartRef = useRef(null);
+  const chartInstance = useRef(null);
+
+  useEffect(() => {
+    if (!chartRef.current || typeof Chart === "undefined") return;
+    if (chartInstance.current) chartInstance.current.destroy();
+    const ctx = chartRef.current.getContext("2d");
+    const data = {
+      labels: ["語彙力", "ビジネス表現", "文法", "産出力"],
+      datasets: [{
+        label: "現在",
+        data: [result.vocabNum, result.bizNum, result.grammarNum, result.writeNum],
+        backgroundColor: "rgba(142,86,135,0.3)",
+        borderColor: C.dusty,
+        borderWidth: 2,
+        pointBackgroundColor: C.dusty,
+      }],
+    };
+    if (prevResult) {
+      data.datasets.push({
+        label: "前回",
+        data: [prevResult.vocabNum, prevResult.bizNum, prevResult.grammarNum, prevResult.writeNum],
+        backgroundColor: "rgba(106,159,216,0.2)",
+        borderColor: "#6A9FD8",
+        borderWidth: 1,
+        borderDash: [5, 5],
+        pointBackgroundColor: "#6A9FD8",
+      });
+    }
+    chartInstance.current = new Chart(ctx, {
+      type: "radar",
+      data,
+      options: {
+        scales: {
+          r: {
+            min: 0, max: 6,
+            ticks: { stepSize: 1, display: false },
+            pointLabels: { color: C.muted, font: { size: 12 } },
+            grid: { color: C.bdr },
+            angleLines: { color: C.bdr },
+          }
+        },
+        plugins: { legend: { display: !!prevResult, labels: { color: C.muted } } },
+        elements: { line: { tension: 0.1 } },
+      }
+    });
+    return () => { if (chartInstance.current) chartInstance.current.destroy(); };
+  }, [result, prevResult]);
+
+  const improved = prevResult && cefrToNum(result.overall) > cefrToNum(prevResult.overall);
+  const skills = [
+    { key:"vocab", label:"語彙力", icon:"📚" },
+    { key:"biz", label:"ビジネス表現", icon:"💬" },
+    { key:"grammar", label:"文法", icon:"✏️" },
+    { key:"write", label:"産出力", icon:"📝" },
+  ];
+  const strongest = skills.reduce((a,b) => result[a.key+"Num"] >= result[b.key+"Num"] ? a : b);
+  const weakest = skills.reduce((a,b) => result[a.key+"Num"] <= result[b.key+"Num"] ? a : b);
+
+  // Personalized recommendations
+  const getRecommendations = () => {
+    const recs = [];
+    if (result.writeNum < result.vocabNum - 1) {
+      recs.push({ icon:"✏️", text:"語彙は豊富ですが産出力が弱め。Composeモードで「使える英語」を増やしましょう。", mode:"compose" });
+    }
+    if (result.vocabNum <= 3) {
+      recs.push({ icon:"🎯", text:"語彙力を強化しましょう。Quiz/Typeモードで単語を増やすのがおすすめです。", mode:"quiz" });
+    }
+    if (result.grammarNum <= 3) {
+      recs.push({ icon:"📚", text:"文法の正確性を高めましょう。Typeモードでスペルと文法を同時に練習できます。", mode:"type" });
+    }
+    if (result.bizNum <= 3) {
+      recs.push({ icon:"💼", text:"ビジネス表現を学びましょう。Advanced/Toughカテゴリに挑戦してみてください。", mode:"quiz" });
+    }
+    if (recs.length === 0) {
+      recs.push({ icon:"🌟", text:"バランスの取れた英語力です！Composeモードでさらに実践力を磨きましょう。", mode:"compose" });
+    }
+    return recs.slice(0, 2);
+  };
+
+  return (
+    <div className="fade-in" style={{padding:"20px",maxWidth:440,margin:"0 auto"}}>
+      <div style={{textAlign:"center",marginBottom:24}}>
+        <div style={{fontSize:48,marginBottom:8}}>{improved?"🎉":"📊"}</div>
+        <div style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:22,fontWeight:700,marginBottom:8}}>診断結果</div>
+        {prevResult && improved && (
+          <div className="pulse" style={{display:"inline-block",background:"linear-gradient(90deg,"+C.ok+","+C.gold+")",
+            color:"#1A0E1E",fontWeight:700,fontSize:14,padding:"4px 14px",borderRadius:999,marginBottom:8}}>
+            レベルアップ！ 🎊
+          </div>
+        )}
+      </div>
+
+      {/* Overall CEFR */}
+      <div className="glass" style={{...glassSx(16),padding:"24px 20px",textAlign:"center",marginBottom:20}}>
+        <div style={{fontSize:13,color:C.muted,marginBottom:8}}>総合レベル</div>
+        <div className="txt-glow" style={{fontFamily:"'Noto Sans JP',sans-serif",fontSize:56,fontWeight:700,color:C.lav}}>
+          {result.overall}
+        </div>
+        <div style={{fontSize:14,color:C.cream,marginTop:4}}>TOEIC目安: {CEFR_TOEIC[result.overall]}</div>
+        {prevResult && (
+          <div style={{fontSize:13,color:improved?C.ok:C.muted,marginTop:8}}>
+            前回: {prevResult.overall} {improved && "→ "+result.overall+" ⬆"}
+          </div>
+        )}
+      </div>
+
+      {/* Radar chart */}
+      <div className="glass" style={{...glassSx(14),padding:"16px",marginBottom:20}}>
+        <div style={{fontSize:13,color:C.muted,marginBottom:12,textAlign:"center"}}>スキル別レーダーチャート</div>
+        <canvas ref={chartRef} style={{maxHeight:220}} />
+      </div>
+
+      {/* Skill breakdown */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}>
+        {skills.map(s => (
+          <div key={s.key} className="glass" style={{...glassSx(10),padding:"12px",textAlign:"center"}}>
+            <span style={{fontSize:20}}>{s.icon}</span>
+            <div style={{fontSize:11,color:C.muted,marginTop:4}}>{s.label}</div>
+            <div style={{fontSize:20,fontWeight:700,color:s.key===strongest.key?C.ok:s.key===weakest.key?C.gold:C.lav}}>
+              {result[s.key]}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Analysis */}
+      <div className="glass" style={{...glassSx(12),padding:"16px",marginBottom:20}}>
+        <div style={{fontSize:13,color:C.muted,marginBottom:10}}>分析</div>
+        <div style={{fontSize:14,lineHeight:1.7,color:C.cream}}>
+          <span style={{color:C.ok}}>得意分野: {strongest.icon} {strongest.label}</span><br/>
+          <span style={{color:C.gold}}>伸ばすべき分野: {weakest.icon} {weakest.label}</span>
+          {result.writeNum < result.vocabNum - 1 && (
+            <div style={{marginTop:8,color:C.lilac}}>
+              💡 語彙は知っているが使えていない状態です。アウトプット練習を増やしましょう。
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Recommendations */}
+      <div className="glass" style={{...glassSx(12),padding:"16px",marginBottom:24}}>
+        <div style={{fontSize:13,color:C.muted,marginBottom:10}}>おすすめ学習プラン</div>
+        {getRecommendations().map((rec, i) => (
+          <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",marginBottom:i<1?10:0}}>
+            <span style={{fontSize:18}}>{rec.icon}</span>
+            <span style={{fontSize:13,lineHeight:1.6,color:C.cream}}>{rec.text}</span>
+          </div>
+        ))}
+      </div>
+
+      <button onClick={onClose} className="main-btn"
+        style={{...baseBtn,background:C.btnGrad,color:ON_ACCENT,padding:"16px 0",fontSize:16,width:"100%",marginBottom:12}}>
+        学習を始める →
+      </button>
+      <button onClick={onRetake}
+        style={{...baseBtn,background:"transparent",border:"1px solid "+C.bdr,color:C.muted,padding:"12px 0",fontSize:14,width:"100%"}}>
+        もう一度診断する
+      </button>
+    </div>
+  );
+}
+
+// ═══════════════════ RADAR CHART FOR STATS (mini version) ═══════════════════
+function MiniRadarChart({ result }) {
+  const chartRef = useRef(null);
+  const chartInstance = useRef(null);
+
+  useEffect(() => {
+    if (!chartRef.current || typeof Chart === "undefined" || !result) return;
+    if (chartInstance.current) chartInstance.current.destroy();
+    const ctx = chartRef.current.getContext("2d");
+    chartInstance.current = new Chart(ctx, {
+      type: "radar",
+      data: {
+        labels: ["語彙", "表現", "文法", "産出"],
+        datasets: [{
+          data: [result.vocabNum, result.bizNum, result.grammarNum, result.writeNum],
+          backgroundColor: "rgba(142,86,135,0.3)",
+          borderColor: C.dusty,
+          borderWidth: 2,
+          pointBackgroundColor: C.dusty,
+          pointRadius: 3,
+        }],
+      },
+      options: {
+        scales: {
+          r: {
+            min: 0, max: 6,
+            ticks: { display: false },
+            pointLabels: { color: C.muted, font: { size: 10 } },
+            grid: { color: C.bdr },
+            angleLines: { color: C.bdr },
+          }
+        },
+        plugins: { legend: { display: false } },
+      }
+    });
+    return () => { if (chartInstance.current) chartInstance.current.destroy(); };
+  }, [result]);
+
+  if (!result) return null;
+  return <canvas ref={chartRef} style={{maxHeight:140}} />;
+}
+
 // ═══════════════════ LEVEL-UP OVERLAY ═══════════════════
 function LevelUpOverlay({ info, onClose }) {
   const [stage, setStage] = useState(0);
@@ -1712,6 +2357,11 @@ function App() {
   const [achQueue, setAchQueue] = useState([]);
   const achRef = useRef(ach);
   const achcRef = useRef(loadAchc());
+  // Diagnostic state
+  const [diagnostic, setDiagnostic] = useState(loadDiagnostic);
+  const [showDiagTest, setShowDiagTest] = useState(() => !loadDiagnostic());
+  const [showDiagResult, setShowDiagResult] = useState(false);
+  const [prevDiagnostic, setPrevDiagnostic] = useState(null);
   // Replay a momentary animation on the header level icon (sparkle / wave).
   const fireFx = useCallback((type) => setHeaderFx(f => ({ type, key: f.key + 1 })), []);
   // 5-in-a-row (and every 5 thereafter) makes the level icon sparkle.
@@ -1878,6 +2528,28 @@ function App() {
     }
   };
 
+  const handleDiagComplete = useCallback((result) => {
+    setDiagnostic(result);
+    setShowDiagTest(false);
+    setShowDiagResult(true);
+    confetti(80, true);
+  }, []);
+
+  const handleDiagSkip = useCallback(() => {
+    setShowDiagTest(false);
+  }, []);
+
+  const handleRetakeDiag = useCallback(() => {
+    setPrevDiagnostic(diagnostic);
+    setShowDiagResult(false);
+    setShowDiagTest(true);
+  }, [diagnostic]);
+
+  const handleCloseDiagResult = useCallback(() => {
+    setShowDiagResult(false);
+    setPrevDiagnostic(null);
+  }, []);
+
   const tabs = [
     {id:"quiz",icon:"🎯",label:"Quiz"},
     {id:"type",icon:"✍️",label:"Type"},
@@ -1898,8 +2570,23 @@ function App() {
     <div style={{minHeight:"100vh",background:C.bgGrad,color:C.cream,maxWidth:480,margin:"0 auto",position:"relative",zIndex:1}}>
       <Ambient />
       <div style={{position:"relative",zIndex:1}}>
+
+      {/* Diagnostic Test (first-time or retake) */}
+      {showDiagTest && (
+        <div style={{position:"fixed",inset:0,zIndex:9999,background:C.bg,overflowY:"auto"}}>
+          <DiagnosticTest onComplete={handleDiagComplete} onSkip={diagnostic ? null : handleDiagSkip} />
+        </div>
+      )}
+
+      {/* Diagnostic Result Screen */}
+      {showDiagResult && diagnostic && (
+        <div style={{position:"fixed",inset:0,zIndex:9998,background:C.bg,overflowY:"auto"}}>
+          <DiagnosticResult result={diagnostic} prevResult={prevDiagnostic} onClose={handleCloseDiagResult} onRetake={handleRetakeDiag} />
+        </div>
+      )}
+
       {/* Word of the day (launch modal) */}
-      {showWotd&&wotd&&(
+      {!showDiagTest&&!showDiagResult&&showWotd&&wotd&&(
         <div style={{position:"fixed",inset:0,zIndex:9996,background:"rgba(17,10,20,0.92)",
           display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
           <div className="modal-pop glass" style={{maxWidth:380,width:"100%",background:C.card,borderRadius:20,
@@ -1988,6 +2675,23 @@ function App() {
         </div>
       </div>
 
+      {/* Personalized recommendation banner */}
+      {diagnostic && !showDiagTest && !showDiagResult && (mode==="quiz"||mode==="type") && diagnostic.writeNum < diagnostic.vocabNum - 1 && (
+        <div style={{padding:"10px 20px",background:"rgba(142,86,135,0.15)",borderBottom:"1px solid "+C.dusty}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontSize:18}}>✏️</span>
+            <div style={{flex:1}}>
+              <div style={{fontSize:12,color:C.lav,fontWeight:600}}>おすすめ: Composeモード</div>
+              <div style={{fontSize:11,color:C.muted}}>語彙力を実践力に変えましょう</div>
+            </div>
+            <button onClick={()=>setMode("compose")}
+              style={{...baseBtn,background:C.btnGrad,color:ON_ACCENT,padding:"6px 14px",fontSize:12}}>
+              試す →
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Category Filter */}
       {(mode==="quiz"||mode==="type")&&(
         <div style={{padding:"10px 20px",display:"flex",gap:6,overflowX:"auto"}}>
@@ -2008,10 +2712,10 @@ function App() {
 
       {/* Content */}
       <div key={mode} className="tab-anim" style={{paddingBottom:80}}>
-        {mode==="quiz"&&<QuizMode vocab={VOCAB} mastery={mastery} onAnswer={handleQuizAnswer} onCombo={handleCombo} onPerfect={handlePerfect} catFilter={catFilter} />}
-        {mode==="type"&&<TypeMode vocab={VOCAB} mastery={mastery} onAnswer={handleTypeAnswer} onCombo={handleCombo} onPerfect={handlePerfect} catFilter={catFilter} />}
+        {mode==="quiz"&&<QuizMode vocab={VOCAB} mastery={mastery} onAnswer={handleQuizAnswer} onCombo={handleCombo} onPerfect={handlePerfect} catFilter={catFilter} diagnostic={diagnostic} />}
+        {mode==="type"&&<TypeMode vocab={VOCAB} mastery={mastery} onAnswer={handleTypeAnswer} onCombo={handleCombo} onPerfect={handlePerfect} catFilter={catFilter} diagnostic={diagnostic} />}
         {mode==="compose"&&<ComposeMode onSolved={handleCompose} />}
-        {mode==="stats"&&<StatsView vocab={VOCAB} mastery={mastery} daily={daily} calendar={calendar} xp={xp} ach={ach} onReset={handleReset} />}
+        {mode==="stats"&&<StatsView vocab={VOCAB} mastery={mastery} daily={daily} calendar={calendar} xp={xp} ach={ach} diagnostic={diagnostic} onReset={handleReset} onRetakeDiag={handleRetakeDiag} />}
       </div>
 
       {/* Bottom Nav */}
