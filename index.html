@@ -1018,23 +1018,23 @@ const DIAG_VOCAB = [
 
 const DIAG_BIZ = [
   // Level 1-2 (A1-A2) - clear difference between formal and too casual/awkward
-  { q:"同僚に資料送付を依頼する最も適切な表現は？", a:"Could you send me the file?", wrong:["Give me that file.","I need the file now.","Send the file to me."], lv:2, exp:"Could you〜は丁寧な依頼表現。他は命令調や直接的すぎます。" },
-  { q:"会議の日程を確認する適切な表現は？", a:"Just to confirm, is Friday okay?", wrong:["Friday, yes?","It's Friday.","Friday meeting."], lv:2, exp:"Just to confirm〜は確認のクッション表現。他は断片的で不自然です。" },
-  { q:"同僚に感謝を伝える自然な表現は？", a:"Thanks, I appreciate it.", wrong:["Thanks a lot lot.","Thank you very.","Thanks so."], lv:1, exp:"Thanks, I appreciate itは自然なビジネス表現。他は文法的に不完全です。" },
+  { q:"同僚に資料送付を依頼する最も適切な表現は？", a:"Could you please send me the file?", wrong:["I want you to send me the file.","You should send me the file now.","Send me your file right away."], lv:2, exp:"Could you please〜は丁寧な依頼表現。他は命令調や直接的すぎます。" },
+  { q:"会議の日程を確認する適切な表現は？", a:"Just to confirm, is Friday okay?", wrong:["I need to know, is it Friday?","Tell me now, is it Friday then?","Make sure now, Friday right?"], lv:2, exp:"Just to confirm〜は確認のクッション表現。他は直接的で不自然です。" },
+  { q:"同僚に感謝を伝える自然な表現は？", a:"Thank you so much, I appreciate it.", wrong:["Thanks a lot, that was helpful.","Thanks very much for your work.","Thank you very for helping me."], lv:1, exp:"Thank you so much, I appreciate itは自然で丁寧。Thank you veryは文法的に不完全（very much が正しい）。" },
   // Level 3 (B1) - correct idiom vs common mistakes
-  { q:"会議で議題を戻す丁寧な表現は？", a:"Let's circle back to the main topic.", wrong:["Let's return back to topic.","Go to first topic please.","We talk that again."], lv:3, exp:"circle backは「後で戻る」の慣用句。return backは重複、他は文法エラー。" },
-  { q:"相手の意見に同意を示す適切な表現は？", a:"That makes sense, I'm on board.", wrong:["Yes, I am agree.","I'm agreeing to you.","That's good to me yes."], lv:3, exp:"I'm on boardは賛同の慣用句。I am agreeは文法エラー（agreeは動詞）。" },
-  { q:"進捗を報告する際の適切な表現は？", a:"Just giving you a heads up.", wrong:["I tell you now thing.","Here information to you.","Let me inform you a thing."], lv:3, exp:"heads upは「事前連絡」の慣用句。他は文法・表現が不自然です。" },
+  { q:"会議で議題を戻す丁寧な表現は？", a:"Let's circle back to the main topic.", wrong:["Let's return back to the topic.","Let me go back to main topic.","We should talk that topic again."], lv:3, exp:"circle backは「後で戻る」の慣用句。return backは重複、他は冠詞・文法エラー。" },
+  { q:"相手の意見に同意を示す適切な表現は？", a:"That makes sense, I'm on board.", wrong:["Yes, I am agree with you now.","I'm agreeing with your opinion.","That's good to me, I accept."], lv:3, exp:"I'm on boardは賛同の慣用句。I am agreeは文法エラー（agreeは動詞なのでamは不要）。" },
+  { q:"進捗を報告する際の適切な表現は？", a:"Just giving you a quick heads up.", wrong:["I tell you information right now.","Here is information update to you.","Let me inform a thing to you."], lv:3, exp:"heads upは「事前連絡」の慣用句。他は文法・表現が不自然です。" },
   // Level 4 (B2) - professional tone vs too direct/casual
-  { q:"提案に反対するとき最も適切な表現は？", a:"I see your point, but let me offer another perspective.", wrong:["That's wrong, I think differently.","No, we should do it my way.","I disagree with that idea."], lv:4, exp:"I see your point, but〜は相手を尊重しつつ反論。他は直接的すぎます。" },
-  { q:"フィードバックを求める適切な表現は？", a:"I'd appreciate your input on this.", wrong:["Tell me what you think.","Give me your feedback.","What do you say about it?"], lv:4, exp:"I'd appreciate your input〜は丁寧なビジネス表現。他はカジュアルすぎます。" },
-  { q:"ミスを謝罪する適切な表現は？", a:"That's on me, I should have caught it.", wrong:["It was a mistake sorry.","I made error, sorry.","My bad, whatever."], lv:4, exp:"That's on meは責任を認めるプロフェッショナルな表現。他はカジュアル/不十分。" },
+  { q:"提案に反対するとき最も適切な表現は？", a:"I see your point, but may I offer another view?", wrong:["That's not right, I disagree with you here.","No, I think we should do it differently now.","I don't agree, my way is much better."], lv:4, exp:"I see your point, but〜は相手を尊重しつつ反論。他は直接的すぎます。" },
+  { q:"フィードバックを求める適切な表現は？", a:"I'd really appreciate your input on this.", wrong:["Tell me what you honestly think now.","Can you give me your feedback please?","What do you have to say about it?"], lv:4, exp:"I'd appreciate your input〜は丁寧なビジネス表現。他はカジュアルすぎます。" },
+  { q:"ミスを謝罪する適切な表現は？", a:"That's on me, I should have caught it.", wrong:["I made an error, I'm sorry about it.","It was a mistake sorry about that.","My bad for that, I'll fix it later."], lv:4, exp:"That's on meは責任を認めるプロフェッショナルな表現。他はカジュアル/不十分。" },
   // Level 5 (C1) - diplomatic vs blunt business communication
-  { q:"クライアントへの値上げを伝える最も適切な表現は？", a:"We're proposing a modest adjustment to reflect our enhanced value.", wrong:["We need to raise prices now.","Prices are going up soon.","We're increasing the cost."], lv:5, exp:"modest adjustmentは値上げを婉曲に伝える表現。他は直接的すぎます。" },
-  { q:"厳しいフィードバックを伝える適切な表現は？", a:"I need to be direct with you about some areas for improvement.", wrong:["Your work is not good enough.","You need to do better work.","This quality is unacceptable."], lv:5, exp:"areas for improvementは建設的なフィードバック用語。他は批判的すぎます。" },
+  { q:"クライアントへの値上げを伝える最も適切な表現は？", a:"We're proposing a modest adjustment to reflect our value.", wrong:["We need to raise our prices starting from now.","Our prices are going up very soon from today.","We're increasing the cost for our services."], lv:5, exp:"modest adjustmentは値上げを婉曲に伝える表現。他は直接的すぎます。" },
+  { q:"厳しいフィードバックを伝える適切な表現は？", a:"I need to be direct with you about some areas to improve.", wrong:["Your work quality is not good enough for us now.","You really need to do much better work from now.","This quality level is unacceptable to us here."], lv:5, exp:"areas to improveは建設的なフィードバック用語。他は批判的すぎます。" },
   // Level 6 (C2) - highly diplomatic vs overly direct
-  { q:"契約非更新を伝える最も慎重な表現は？", a:"After careful consideration, we've decided to part ways amicably.", wrong:["We're not renewing the contract.","The contract is ending now.","We don't want to continue."], lv:6, exp:"part ways amicablyは円満に関係を終える高度な表現。他は直接的すぎます。" },
-  { q:"難しい交渉で妥協点を探る適切な表現は？", a:"I believe there's room for us to find common ground here.", wrong:["Let's just compromise already.","Can we finish negotiating now?","We need to agree on something."], lv:6, exp:"find common groundは双方が納得する点を探す外交的表現。" },
+  { q:"契約非更新を伝える最も慎重な表現は？", a:"After careful consideration, we've decided to part ways amicably.", wrong:["We have decided that we're not going to renew the contract.", "Unfortunately we will be ending the contract with you now.","We don't want to continue this contract any longer."], lv:6, exp:"part ways amicablyは円満に関係を終える高度な表現。他は直接的すぎます。" },
+  { q:"難しい交渉で妥協点を探る適切な表現は？", a:"I believe there's room for us to find common ground here.", wrong:["Let's just compromise on something already and finish.","Can we finish up negotiating and just agree now?","We need to agree on something soon so let's move."], lv:6, exp:"find common groundは双方が納得する点を探す外交的表現。" },
 ];
 
 const DIAG_GRAMMAR = [
@@ -2013,7 +2013,7 @@ function DiagnosticTest({ onComplete, onSkip }) {
             {icon:"📚",label:"Part 1: 語彙力",n:"5問"},
             {icon:"💬",label:"Part 2: ビジネス表現",n:"4問"},
             {icon:"✏️",label:"Part 3: 文法",n:"3問"},
-            {icon:"📝",label:"Part 4: 産出力",n:"1問"},
+            {icon:"📝",label:"Part 4: 作文力",n:"1問"},
           ].map((p,i)=>(
             <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",background:C.card,borderRadius:10,textAlign:"left"}}>
               <span style={{fontSize:24}}>{p.icon}</span>
@@ -2041,7 +2041,7 @@ function DiagnosticTest({ onComplete, onSkip }) {
       <div className="fade-in" style={{padding:"16px 20px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
           <span style={{color:C.muted,fontSize:14}}>13 / 13</span>
-          <span style={{background:C.dusty,color:"white",padding:"3px 12px",borderRadius:20,fontSize:12}}>Part 4: 産出力</span>
+          <span style={{background:C.dusty,color:"white",padding:"3px 12px",borderRadius:20,fontSize:12}}>Part 4: 作文力</span>
         </div>
         <div style={{height:6,background:C.card,borderRadius:3,overflow:"hidden",marginBottom:24}}>
           <div style={{height:"100%",width:"100%",background:C.btnGrad,transition:"width 0.3s"}} />
@@ -2155,7 +2155,7 @@ function DiagnosticResult({ result, prevResult, onClose, onRetake }) {
     if (chartInstance.current) chartInstance.current.destroy();
     const ctx = chartRef.current.getContext("2d");
     const data = {
-      labels: ["語彙力", "ビジネス表現", "文法", "産出力"],
+      labels: ["語彙力", "ビジネス表現", "文法", "作文力"],
       datasets: [{
         label: "現在",
         data: [result.vocabNum, result.bizNum, result.grammarNum, result.writeNum],
@@ -2201,7 +2201,7 @@ function DiagnosticResult({ result, prevResult, onClose, onRetake }) {
     { key:"vocab", label:"語彙力", icon:"📚" },
     { key:"biz", label:"ビジネス表現", icon:"💬" },
     { key:"grammar", label:"文法", icon:"✏️" },
-    { key:"write", label:"産出力", icon:"📝" },
+    { key:"write", label:"作文力", icon:"📝" },
   ];
   const strongest = skills.reduce((a,b) => result[a.key+"Num"] >= result[b.key+"Num"] ? a : b);
   const weakest = skills.reduce((a,b) => result[a.key+"Num"] <= result[b.key+"Num"] ? a : b);
@@ -2210,7 +2210,7 @@ function DiagnosticResult({ result, prevResult, onClose, onRetake }) {
   const getRecommendations = () => {
     const recs = [];
     if (result.writeNum < result.vocabNum - 1) {
-      recs.push({ icon:"✏️", text:"語彙は豊富ですが産出力が弱め。Composeモードで「使える英語」を増やしましょう。", mode:"compose" });
+      recs.push({ icon:"✏️", text:"語彙は豊富ですが作文力が弱め。Composeモードで「使える英語」を増やしましょう。", mode:"compose" });
     }
     if (result.vocabNum <= 3) {
       recs.push({ icon:"🎯", text:"語彙力を強化しましょう。Quiz/Typeモードで単語を増やすのがおすすめです。", mode:"quiz" });
