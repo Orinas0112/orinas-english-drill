@@ -991,72 +991,72 @@ const ACH = [
 
 const DIAG_VOCAB = [
   // Level 1 (A1) - 3 questions
-  { q:"\"meeting\" の意味は？", a:"会議", wrong:["会計","契約","締切"], lv:1 },
-  { q:"\"email\" の意味は？", a:"電子メール", wrong:["電話","書類","名刺"], lv:1 },
-  { q:"\"schedule\" の意味は？", a:"予定", wrong:["場所","費用","書類"], lv:1 },
+  { q:"\"meeting\" の意味は？", a:"会議", wrong:["会計","契約","締切"], lv:1, exp:"meetingは人が集まって話し合う「会議」。meetは「会う」という動詞。" },
+  { q:"\"email\" の意味は？", a:"電子メール", wrong:["電話","書類","名刺"], lv:1, exp:"emailはelectronic mailの略。e-は「電子」を意味する接頭辞。" },
+  { q:"\"schedule\" の意味は？", a:"予定", wrong:["場所","費用","書類"], lv:1, exp:"scheduleは「予定・スケジュール」。動詞として「予定を立てる」の意味も。" },
   // Level 2 (A2) - 3 questions
-  { q:"\"deadline\" の意味は？", a:"締切", wrong:["取引先","予算","議題"], lv:2 },
-  { q:"\"budget\" の意味は？", a:"予算", wrong:["契約","報告","承認"], lv:2 },
-  { q:"\"confirm\" の意味は？", a:"確認する", wrong:["拒否する","延長する","変更する"], lv:2 },
+  { q:"\"deadline\" の意味は？", a:"締切", wrong:["取引先","予算","議題"], lv:2, exp:"deadlineは「締切」。dead(絶対の)+line(線)で、超えられない線＝締切。" },
+  { q:"\"budget\" の意味は？", a:"予算", wrong:["契約","報告","承認"], lv:2, exp:"budgetは「予算」。形容詞で「格安の」という意味でも使われる。" },
+  { q:"\"confirm\" の意味は？", a:"確認する", wrong:["拒否する","延長する","変更する"], lv:2, exp:"confirmはcon(完全に)+firm(固める)で「確認する・確定する」。" },
   // Level 3 (B1) - 3 questions
-  { q:"\"align\" の意味は？", a:"認識を合わせる", wrong:["反対する","延期する","報告する"], lv:3 },
-  { q:"\"prioritize\" の意味は？", a:"優先する", wrong:["却下する","延期する","記録する"], lv:3 },
-  { q:"\"escalate\" の意味は？", a:"上位に引き上げる", wrong:["縮小する","中断する","復旧する"], lv:3 },
+  { q:"\"align\" の意味は？", a:"認識を合わせる", wrong:["反対する","延期する","報告する"], lv:3, exp:"alignは「一列に並べる→認識を合わせる」。ビジネスでよく使う表現。" },
+  { q:"\"prioritize\" の意味は？", a:"優先する", wrong:["却下する","延期する","記録する"], lv:3, exp:"prioritize=priority(優先)+ize(〜化する)。優先順位をつけること。" },
+  { q:"\"escalate\" の意味は？", a:"上位に引き上げる", wrong:["縮小する","中断する","復旧する"], lv:3, exp:"escalateは「段階的に上げる」。問題を上司に上げる時によく使う。" },
   // Level 4 (B2) - 3 questions
-  { q:"\"bottleneck\" の意味は？", a:"ボトルネック・律速", wrong:["突破口","転換点","出発点"], lv:4 },
-  { q:"\"de-risk\" の意味は？", a:"リスクを下げる", wrong:["危険を冒す","投資する","撤退する"], lv:4 },
-  { q:"\"trade-off\" の意味は？", a:"取捨選択", wrong:["完全一致","相互依存","強制終了"], lv:4 },
+  { q:"\"bottleneck\" の意味は？", a:"ボトルネック・律速", wrong:["突破口","転換点","出発点"], lv:4, exp:"bottleneckは瓶の首の狭い部分。プロセスを遅らせる障害点のこと。" },
+  { q:"\"de-risk\" の意味は？", a:"リスクを下げる", wrong:["危険を冒す","投資する","撤退する"], lv:4, exp:"de-は「取り除く」の接頭辞。de-risk=リスクを取り除く・軽減する。" },
+  { q:"\"trade-off\" の意味は？", a:"取捨選択", wrong:["完全一致","相互依存","強制終了"], lv:4, exp:"trade-offは何かを得るために何かを犠牲にすること。トレードオフ。" },
   // Level 5 (C1) - 3 questions
-  { q:"\"table-stakes\" の意味は？", a:"参入の最低条件", wrong:["最終目標","追加報酬","交渉材料"], lv:5 },
-  { q:"\"scope creep\" の意味は？", a:"範囲が際限なく膨らむ", wrong:["予算超過","人員不足","品質低下"], lv:5 },
-  { q:"\"north star\" の意味は？", a:"最上位の指標", wrong:["短期目標","副次指標","参考数値"], lv:5 },
+  { q:"\"table-stakes\" の意味は？", a:"参入の最低条件", wrong:["最終目標","追加報酬","交渉材料"], lv:5, exp:"table-stakesはポーカー用語から。ゲームに参加するための最低限の賭け金→最低条件。" },
+  { q:"\"scope creep\" の意味は？", a:"範囲が際限なく膨らむ", wrong:["予算超過","人員不足","品質低下"], lv:5, exp:"scope(範囲)+creep(忍び寄る)。プロジェクトの範囲が徐々に拡大する現象。" },
+  { q:"\"north star\" の意味は？", a:"最上位の指標", wrong:["短期目標","副次指標","参考数値"], lv:5, exp:"north star(北極星)は常に北を指す。転じて、ぶれない最上位の目標・指標。" },
   // Level 6 (C2) - 3 questions
-  { q:"\"sunk cost fallacy\" の意味は？", a:"埋没費用の誤謬", wrong:["機会費用","限界費用","固定費用"], lv:6 },
-  { q:"\"force majeure\" の意味は？", a:"不可抗力", wrong:["強制執行","最終判断","優先権"], lv:6 },
-  { q:"\"indemnify\" の意味は？", a:"補償する", wrong:["告発する","拘束する","仲裁する"], lv:6 },
+  { q:"\"sunk cost fallacy\" の意味は？", a:"埋没費用の誤謬", wrong:["機会費用","限界費用","固定費用"], lv:6, exp:"sunk cost=回収不能な投資。それに固執する心理的バイアスがfallacy(誤謬)。" },
+  { q:"\"force majeure\" の意味は？", a:"不可抗力", wrong:["強制執行","最終判断","優先権"], lv:6, exp:"フランス語由来の法律用語。天災など予測不能な事態を指す。" },
+  { q:"\"indemnify\" の意味は？", a:"補償する", wrong:["告発する","拘束する","仲裁する"], lv:6, exp:"indemnifyは損害を補填・補償すること。契約書でよく使われる法律用語。" },
 ];
 
 const DIAG_BIZ = [
-  // Level 1-2 (A1-A2) - similar length, natural alternatives
-  { q:"同僚に資料送付を依頼する最も適切な表現は？", a:"Could you send me the file?", wrong:["Can you give me that file?","Would you get me that file?","Will you hand me the file?"], lv:2 },
-  { q:"会議の日程を確認する適切な表現は？", a:"Just to confirm, is Friday okay?", wrong:["Friday is the day, right?","We meet on Friday, correct?","Friday works for you, yes?"], lv:2 },
-  { q:"同僚に感謝を伝える自然な表現は？", a:"Thanks, I appreciate it.", wrong:["Thank you very kindly.","I'm grateful to you much.","Thanks for doing that thing."], lv:1 },
-  // Level 3 (B1) - similar complexity, subtle differences
-  { q:"会議で議題を戻す丁寧な表現は？", a:"Let's circle back to the main topic.", wrong:["Let's return back to that point.","Can we go to the first topic?","We should discuss that again."], lv:3 },
-  { q:"相手の意見に同意を示す適切な表現は？", a:"That makes sense, I'm on board.", wrong:["I think so too about that.","I'm agreeable with your view.","Your point sounds reasonable to me."], lv:3 },
-  { q:"進捗を報告する際の適切な表現は？", a:"Just giving you a heads up.", wrong:["I am informing you now.","Let me tell you something.","Here is the information for you."], lv:3 },
-  // Level 4 (B2) - professional nuances
-  { q:"提案に反対するとき最も適切な表現は？", a:"I see your point, but let me offer another perspective.", wrong:["That's an interesting idea, though I have some concerns.", "I understand, but I think we should consider alternatives.", "Your suggestion is noted, but I'd like to propose something."], lv:4 },
-  { q:"フィードバックを求める適切な表現は？", a:"I'd appreciate your input on this.", wrong:["Please give me your feedback here.","I would like your comments about it.","Could you share your thoughts on this?"], lv:4 },
-  { q:"ミスを謝罪する適切な表現は？", a:"That's on me, I should have caught it.", wrong:["I apologize for the error I made.","Sorry about that mistake I did.","I take responsibility for this issue."], lv:4 },
-  // Level 5 (C1) - nuanced professional language
-  { q:"クライアントへの値上げを伝える最も適切な表現は？", a:"We're proposing a modest adjustment to reflect our enhanced value.", wrong:["We'd like to revise our pricing to better align with market rates.","We're implementing a small increase based on our improved services.","We need to adjust our fees to match our expanded offerings."], lv:5 },
-  { q:"厳しいフィードバックを伝える適切な表現は？", a:"I need to be direct with you about some areas for improvement.", wrong:["I want to share some constructive criticism with you today.","There are several points we should discuss about your work.","I have some honest feedback to share regarding your performance."], lv:5 },
-  // Level 6 (C2) - highly nuanced diplomatic language
-  { q:"契約非更新を伝える最も慎重な表現は？", a:"After careful consideration, we've decided to part ways amicably.", wrong:["We've concluded that ending our partnership would be best for both.","Following a thorough review, we believe it's time to move forward.","Upon reflection, we feel this arrangement has run its course."], lv:6 },
-  { q:"難しい交渉で妥協点を探る適切な表現は？", a:"I believe there's room for us to find common ground here.", wrong:["Perhaps we could explore some middle territory on this matter.","I think we can work together to find a solution that works.","There might be an opportunity to bridge our differences."], lv:6 },
+  // Level 1-2 (A1-A2) - clear difference between formal and too casual/awkward
+  { q:"同僚に資料送付を依頼する最も適切な表現は？", a:"Could you send me the file?", wrong:["Give me that file.","I need the file now.","Send the file to me."], lv:2, exp:"Could you〜は丁寧な依頼表現。他は命令調や直接的すぎます。" },
+  { q:"会議の日程を確認する適切な表現は？", a:"Just to confirm, is Friday okay?", wrong:["Friday, yes?","It's Friday.","Friday meeting."], lv:2, exp:"Just to confirm〜は確認のクッション表現。他は断片的で不自然です。" },
+  { q:"同僚に感謝を伝える自然な表現は？", a:"Thanks, I appreciate it.", wrong:["Thanks a lot lot.","Thank you very.","Thanks so."], lv:1, exp:"Thanks, I appreciate itは自然なビジネス表現。他は文法的に不完全です。" },
+  // Level 3 (B1) - correct idiom vs common mistakes
+  { q:"会議で議題を戻す丁寧な表現は？", a:"Let's circle back to the main topic.", wrong:["Let's return back to topic.","Go to first topic please.","We talk that again."], lv:3, exp:"circle backは「後で戻る」の慣用句。return backは重複、他は文法エラー。" },
+  { q:"相手の意見に同意を示す適切な表現は？", a:"That makes sense, I'm on board.", wrong:["Yes, I am agree.","I'm agreeing to you.","That's good to me yes."], lv:3, exp:"I'm on boardは賛同の慣用句。I am agreeは文法エラー（agreeは動詞）。" },
+  { q:"進捗を報告する際の適切な表現は？", a:"Just giving you a heads up.", wrong:["I tell you now thing.","Here information to you.","Let me inform you a thing."], lv:3, exp:"heads upは「事前連絡」の慣用句。他は文法・表現が不自然です。" },
+  // Level 4 (B2) - professional tone vs too direct/casual
+  { q:"提案に反対するとき最も適切な表現は？", a:"I see your point, but let me offer another perspective.", wrong:["That's wrong, I think differently.","No, we should do it my way.","I disagree with that idea."], lv:4, exp:"I see your point, but〜は相手を尊重しつつ反論。他は直接的すぎます。" },
+  { q:"フィードバックを求める適切な表現は？", a:"I'd appreciate your input on this.", wrong:["Tell me what you think.","Give me your feedback.","What do you say about it?"], lv:4, exp:"I'd appreciate your input〜は丁寧なビジネス表現。他はカジュアルすぎます。" },
+  { q:"ミスを謝罪する適切な表現は？", a:"That's on me, I should have caught it.", wrong:["It was a mistake sorry.","I made error, sorry.","My bad, whatever."], lv:4, exp:"That's on meは責任を認めるプロフェッショナルな表現。他はカジュアル/不十分。" },
+  // Level 5 (C1) - diplomatic vs blunt business communication
+  { q:"クライアントへの値上げを伝える最も適切な表現は？", a:"We're proposing a modest adjustment to reflect our enhanced value.", wrong:["We need to raise prices now.","Prices are going up soon.","We're increasing the cost."], lv:5, exp:"modest adjustmentは値上げを婉曲に伝える表現。他は直接的すぎます。" },
+  { q:"厳しいフィードバックを伝える適切な表現は？", a:"I need to be direct with you about some areas for improvement.", wrong:["Your work is not good enough.","You need to do better work.","This quality is unacceptable."], lv:5, exp:"areas for improvementは建設的なフィードバック用語。他は批判的すぎます。" },
+  // Level 6 (C2) - highly diplomatic vs overly direct
+  { q:"契約非更新を伝える最も慎重な表現は？", a:"After careful consideration, we've decided to part ways amicably.", wrong:["We're not renewing the contract.","The contract is ending now.","We don't want to continue."], lv:6, exp:"part ways amicablyは円満に関係を終える高度な表現。他は直接的すぎます。" },
+  { q:"難しい交渉で妥協点を探る適切な表現は？", a:"I believe there's room for us to find common ground here.", wrong:["Let's just compromise already.","Can we finish negotiating now?","We need to agree on something."], lv:6, exp:"find common groundは双方が納得する点を探す外交的表現。" },
 ];
 
 const DIAG_GRAMMAR = [
   // Level 2 (A2) - 2 questions
-  { q:"正しい文を選んでください:", a:"She has been working here for five years.", wrong:["She is working here since five years.","She works here from five years.","She has been work here for five years."], lv:2 },
-  { q:"空欄に入る適切なものは？ \"I ___ to the meeting yesterday.\"", a:"went", wrong:["have gone","was going","had went"], lv:2 },
+  { q:"正しい文を選んでください:", a:"She has been working here for five years.", wrong:["She is working here since five years.","She works here from five years.","She has been work here for five years."], lv:2, exp:"継続を表す現在完了進行形(has been ~ing)+ forが正解。sinceの後は時点、fromは期間には使わない。" },
+  { q:"空欄に入る適切なものは？ \"I ___ to the meeting yesterday.\"", a:"went", wrong:["have gone","was going","had went"], lv:2, exp:"yesterdayがあるので過去形wentが正解。現在完了have goneは過去の一点と使えない。" },
   // Level 3 (B1) - 2 questions
-  { q:"空欄に入る最も適切なものは？ \"If I ___ earlier, I would have caught the train.\"", a:"had left", wrong:["left","would leave","have left"], lv:3 },
-  { q:"空欄に入る適切なものは？ \"By the time you arrive, I ___ the report.\"", a:"will have finished", wrong:["will finish","have finished","finished"], lv:3 },
+  { q:"空欄に入る最も適切なものは？ \"If I ___ earlier, I would have caught the train.\"", a:"had left", wrong:["left","would leave","have left"], lv:3, exp:"仮定法過去完了。「もし〜していたら」はIf+had+過去分詞。would have+過去分詞と対応。" },
+  { q:"空欄に入る適切なものは？ \"By the time you arrive, I ___ the report.\"", a:"will have finished", wrong:["will finish","have finished","finished"], lv:3, exp:"By the time〜(〜する頃には)は未来完了形will have+過去分詞と使う。完了している状態を表す。" },
   // Level 4 (B2) - 2 questions
-  { q:"正しい文を選んでください:", a:"The report, which was submitted yesterday, needs revision.", wrong:["The report which was submitted yesterday, needs revision.","The report, which was submitted yesterday needs revision.","The report which, was submitted yesterday, needs revision."], lv:4 },
-  { q:"空欄に入る適切なものは？ \"The manager insisted that he ___ present.\"", a:"be", wrong:["is","was","would be"], lv:4 },
+  { q:"正しい文を選んでください:", a:"The report, which was submitted yesterday, needs revision.", wrong:["The report which was submitted yesterday, needs revision.","The report, which was submitted yesterday needs revision.","The report which, was submitted yesterday, needs revision."], lv:4, exp:"非制限用法の関係代名詞は前後にカンマが必要。whichの前後両方にカンマがある文が正解。" },
+  { q:"空欄に入る適切なものは？ \"The manager insisted that he ___ present.\"", a:"be", wrong:["is","was","would be"], lv:4, exp:"insistなどの要求・提案の動詞の後のthat節は仮定法現在(原形動詞)を使う。" },
   // Level 5 (C1) - 2 questions
-  { q:"空欄に入る最も適切なものは？ \"Not only ___ the deadline, but she also exceeded expectations.\"", a:"did she meet", wrong:["she met","she did meet","met she"], lv:5 },
-  { q:"空欄に入る適切なものは？ \"Had I known about the issue, I ___ it sooner.\"", a:"would have addressed", wrong:["would address","have addressed","addressed"], lv:5 },
+  { q:"空欄に入る最も適切なものは？ \"Not only ___ the deadline, but she also exceeded expectations.\"", a:"did she meet", wrong:["she met","she did meet","met she"], lv:5, exp:"Not only〜で始まる文は倒置が必要。助動詞did+主語+動詞原形の語順。" },
+  { q:"空欄に入る適切なものは？ \"Had I known about the issue, I ___ it sooner.\"", a:"would have addressed", wrong:["would address","have addressed","addressed"], lv:5, exp:"Had I known〜(=If I had known)は仮定法過去完了の倒置形。帰結節もwould have+過去分詞。" },
   // Level 6 (C2) - 2 questions
-  { q:"文法的に正しく、かつ最もフォーマルな表現は？", a:"Were the board to approve, we would proceed immediately.", wrong:["If the board would approve, we proceed immediately.","Should the board approves, we will proceed immediately.","If the board will approve, we would proceed immediately."], lv:6 },
-  { q:"空欄に入る最もフォーマルな表現は？ \"___, the proposal would merit further consideration.\"", a:"Were the circumstances different", wrong:["If the circumstances are different","Should circumstances be different","When circumstances differ"], lv:6 },
+  { q:"文法的に正しく、かつ最もフォーマルな表現は？", a:"Were the board to approve, we would proceed immediately.", wrong:["If the board would approve, we proceed immediately.","Should the board approves, we will proceed immediately.","If the board will approve, we would proceed immediately."], lv:6, exp:"Were+主語+to do〜は仮定法のフォーマルな倒置形。条件節にwouldは使えない。" },
+  { q:"空欄に入る最もフォーマルな表現は？ \"___, the proposal would merit further consideration.\"", a:"Were the circumstances different", wrong:["If the circumstances are different","Should circumstances be different","When circumstances differ"], lv:6, exp:"仮定法過去の倒置形Were+主語+〜が最もフォーマル。Shouldの後は動詞原形。" },
 ];
 
 const DIAG_WRITE = [
-  { q:"You need to postpone a meeting with a client due to an urgent matter. Write a brief, professional email (2-3 sentences) apologizing and proposing a new time.", lv:3 },
+  { q:"急用のため、クライアントとの会議を延期する必要があります。謝罪し、新しい日時を提案する簡潔なビジネスメール（2〜3文）を英語で書いてください。", lv:3 },
 ];
 
 // ═══════════════════ TEXT-TO-SPEECH BUTTON ═══════════════════
@@ -1942,17 +1942,39 @@ function DiagnosticTest({ onComplete, onSkip }) {
   };
 
   const calculateResults = () => {
-    // Calculate CEFR for each skill (average level of correct answers, weighted)
+    // Improved CAT scoring: considers both correct and incorrect answers
+    // The estimated level is where you have ~50% chance of getting it right
+    // Correct answers raise the estimate, incorrect answers lower it
     const calcSkill = (arr) => {
       if (!arr || arr.length === 0) return 3;
-      const correct = arr.filter(a => a.correct);
-      if (correct.length === 0) return Math.max(1, arr[0].lv - 1);
-      return correct.reduce((sum, a) => sum + a.lv, 0) / correct.length;
+      // Calculate weighted score based on difficulty and correctness
+      let totalWeight = 0;
+      let weightedSum = 0;
+      arr.forEach(a => {
+        const weight = 1; // Each question equally weighted
+        if (a.correct) {
+          // Correct: your level is at least this high, maybe higher
+          weightedSum += a.lv * weight;
+        } else {
+          // Incorrect: your level is probably below this
+          weightedSum += Math.max(1, a.lv - 1) * weight;
+        }
+        totalWeight += weight;
+      });
+      if (totalWeight === 0) return 3;
+      const raw = weightedSum / totalWeight;
+      // Apply correction: if mostly correct, round up; if mostly wrong, round down
+      const correctRate = arr.filter(a => a.correct).length / arr.length;
+      const adjusted = raw + (correctRate - 0.5) * 0.5; // Small adjustment based on accuracy
+      return Math.max(1, Math.min(6, adjusted));
     };
     const vocabScore = calcSkill(partScores.vocab);
     const bizScore = calcSkill(partScores.biz);
     const grammarScore = calcSkill(partScores.grammar);
-    const writeScore = partScores.write ? Math.min(6, (partScores.write.rating / 5) * 6) : 3;
+    // Write score: convert 1-5 rating to 1-6 CEFR scale with better mapping
+    const writeScore = partScores.write
+      ? Math.max(1, Math.min(6, 1 + (partScores.write.rating - 1) * 1.25)) // 1→1, 2→2.25, 3→3.5, 4→4.75, 5→6
+      : 3;
     const overall = (vocabScore + bizScore + grammarScore + writeScore) / 4;
     return {
       overall: numToCefr(overall),
@@ -2100,11 +2122,20 @@ function DiagnosticTest({ onComplete, onSkip }) {
           })}
         </div>
         {selected !== null && (
-          <div style={{textAlign:"center",marginTop:24}}>
-            <button onClick={handleNext} className="main-btn"
-              style={{...baseBtn,background:C.btnGrad,color:ON_ACCENT,padding:"12px 28px",fontSize:15}}>
-              {step < 13 ? "Next →" : "Part 4 へ →"}
-            </button>
+          <div className="fade-in" style={{marginTop:20}}>
+            {/* Explanation box */}
+            {currentQ.exp && (
+              <div style={{padding:"14px 16px",background:C.card,borderRadius:12,borderLeft:"3px solid "+(selected===currentQ.a?C.ok:C.gold),marginBottom:16}}>
+                <div style={{fontSize:12,color:C.muted,marginBottom:6}}>💡 解説</div>
+                <div style={{fontSize:13,lineHeight:1.7,color:C.cream}}>{currentQ.exp}</div>
+              </div>
+            )}
+            <div style={{textAlign:"center"}}>
+              <button onClick={handleNext} className="main-btn"
+                style={{...baseBtn,background:C.btnGrad,color:ON_ACCENT,padding:"12px 28px",fontSize:15}}>
+                {step < 13 ? "Next →" : "Part 4 へ →"}
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -2257,7 +2288,7 @@ function DiagnosticResult({ result, prevResult, onClose, onRetake }) {
       </div>
 
       {/* Recommendations */}
-      <div className="glass" style={{...glassSx(12),padding:"16px",marginBottom:24}}>
+      <div className="glass" style={{...glassSx(12),padding:"16px",marginBottom:20}}>
         <div style={{fontSize:13,color:C.muted,marginBottom:10}}>おすすめ学習プラン</div>
         {getRecommendations().map((rec, i) => (
           <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",marginBottom:i<1?10:0}}>
@@ -2265,6 +2296,27 @@ function DiagnosticResult({ result, prevResult, onClose, onRetake }) {
             <span style={{fontSize:13,lineHeight:1.6,color:C.cream}}>{rec.text}</span>
           </div>
         ))}
+      </div>
+
+      {/* CEFR Level Reference Table */}
+      <div className="glass" style={{...glassSx(12),padding:"16px",marginBottom:24}}>
+        <div style={{fontSize:13,color:C.muted,marginBottom:12}}>CEFRレベル一覧</div>
+        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+          {[
+            {lv:"C2",toeic:"990+",desc:"ネイティブに近い運用力。高度な専門的議論も可能",color:"#9A86D8"},
+            {lv:"C1",toeic:"945〜990",desc:"流暢に自己表現。複雑な文章の読み書きに対応",color:"#8595C9"},
+            {lv:"B2",toeic:"785〜940",desc:"自分の専門分野で議論可能。複雑な文章を理解",color:"#4FB0A5"},
+            {lv:"B1",toeic:"550〜780",desc:"日常会話・旅行で困らない。簡単な文章を作成",color:"#7FBF8F"},
+            {lv:"A2",toeic:"225〜545",desc:"基本的なやりとりが可能。自己紹介や買い物",color:"#D4A054"},
+            {lv:"A1",toeic:"〜220",desc:"挨拶や簡単な表現。ゆっくり話せば理解できる",color:"#E07AA8"},
+          ].map(item => (
+            <div key={item.lv} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:result.overall===item.lv?"rgba(142,86,135,0.2)":C.card,borderRadius:8,border:result.overall===item.lv?"1px solid "+C.dusty:"1px solid transparent"}}>
+              <span style={{background:item.color,color:"white",padding:"2px 8px",borderRadius:6,fontSize:12,fontWeight:700,minWidth:28,textAlign:"center"}}>{item.lv}</span>
+              <span style={{fontSize:11,color:C.muted,minWidth:60}}>TOEIC {item.toeic}</span>
+              <span style={{fontSize:11,color:C.cream,flex:1}}>{item.desc}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       <button onClick={onClose} className="main-btn"
