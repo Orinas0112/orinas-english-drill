@@ -1808,38 +1808,58 @@ function DiagnosticTest({ onComplete, onSkip }) {
   const [writeResult, setWriteResult] = useState(null);
   const [partScores, setPartScores] = useState({ vocab:[], biz:[], grammar:[], write:null });
 
-  // Generate adaptive questions based on current level
-  const getQuestion = (qNum) => {
-    if (qNum <= 5) {
-      // Part 1: Vocabulary
-      const pool = DIAG_VOCAB.filter(q => Math.abs(q.lv - curLv) <= 1);
-      const unused = pool.filter(q => !answers.find(a => a.q === q.q));
-      return { part:1, ...(unused[0] || pool[0]) };
-    } else if (qNum <= 9) {
-      // Part 2: Business expressions
-      const pool = DIAG_BIZ.filter(q => Math.abs(q.lv - curLv) <= 1);
-      const unused = pool.filter(q => !answers.find(a => a.q === q.q));
-      return { part:2, ...(unused[0] || pool[0]) };
-    } else if (qNum <= 12) {
-      // Part 3: Grammar
-      const pool = DIAG_GRAMMAR.filter(q => Math.abs(q.lv - curLv) <= 1);
-      const unused = pool.filter(q => !answers.find(a => a.q === q.q));
-      return { part:3, ...(unused[0] || pool[0]) };
-    } else {
-      // Part 4: Production (writing)
-      return { part:4, ...DIAG_WRITE[0] };
-    }
-  };
+  // Store current question and shuffled choices in state to prevent re-shuffle on re-render
+  const [currentQ, setCurrentQ] = useState(null);
+  const [choices, setChoices] = useState([]);
+  const answersRef = useRef(answers);
+  const curLvRef = useRef(curLv);
+  answersRef.current = answers;
+  curLvRef.current = curLv;
 
-  const currentQ = step >= 1 && step <= 13 ? getQuestion(step) : null;
-  const choices = currentQ && currentQ.a ? shuffle([currentQ.a, ...currentQ.wrong]) : [];
+  // Generate question when step changes
+  useEffect(() => {
+    if (step >= 1 && step <= 13) {
+      const lv = curLvRef.current;
+      const ans = answersRef.current;
+      let q;
+      if (step <= 5) {
+        // Part 1: Vocabulary
+        const pool = DIAG_VOCAB.filter(x => Math.abs(x.lv - lv) <= 1);
+        const unused = pool.filter(x => !ans.find(a => a.q === x.q));
+        q = { part:1, ...(unused[0] || pool[0]) };
+      } else if (step <= 9) {
+        // Part 2: Business expressions
+        const pool = DIAG_BIZ.filter(x => Math.abs(x.lv - lv) <= 1);
+        const unused = pool.filter(x => !ans.find(a => a.q === x.q));
+        q = { part:2, ...(unused[0] || pool[0]) };
+      } else if (step <= 12) {
+        // Part 3: Grammar
+        const pool = DIAG_GRAMMAR.filter(x => Math.abs(x.lv - lv) <= 1);
+        const unused = pool.filter(x => !ans.find(a => a.q === x.q));
+        q = { part:3, ...(unused[0] || pool[0]) };
+      } else {
+        // Part 4: Production (writing)
+        q = { part:4, ...DIAG_WRITE[0] };
+      }
+      setCurrentQ(q);
+      if (q && q.a) {
+        setChoices(shuffle([q.a, ...q.wrong]));
+      } else {
+        setChoices([]);
+      }
+    } else {
+      setCurrentQ(null);
+      setChoices([]);
+    }
+  }, [step]);
 
   const handleSelect = (choice) => {
     if (selected !== null) return;
     setSelected(choice);
     const correct = choice === currentQ.a;
-    const newAnswers = [...answers, { q: currentQ.q, lv: currentQ.lv, correct, part: currentQ.part }];
+    const newAnswers = [...answersRef.current, { q: currentQ.q, lv: currentQ.lv, correct, part: currentQ.part }];
     setAnswers(newAnswers);
+    answersRef.current = newAnswers;
     // Update part scores
     const ps = { ...partScores };
     if (currentQ.part === 1) ps.vocab = [...ps.vocab, { lv: currentQ.lv, correct }];
@@ -1847,8 +1867,9 @@ function DiagnosticTest({ onComplete, onSkip }) {
     else if (currentQ.part === 3) ps.grammar = [...ps.grammar, { lv: currentQ.lv, correct }];
     setPartScores(ps);
     // CAT: adjust difficulty
-    if (correct && curLv < 6) setCurLv(Math.min(6, curLv + 1));
-    else if (!correct && curLv > 1) setCurLv(Math.max(1, curLv - 1));
+    const newLv = correct ? Math.min(6, curLvRef.current + 1) : Math.max(1, curLvRef.current - 1);
+    setCurLv(newLv);
+    curLvRef.current = newLv;
   };
 
   const handleNext = () => {
@@ -2020,17 +2041,18 @@ function DiagnosticTest({ onComplete, onSkip }) {
           </div>
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:10}}>
-          {choices.map((ch,i) => {
-            const isThis = selected === ch;
-            const isRight = ch === currentQ.a;
+          {choices.map((ch) => {
+            const answered = selected !== null;
+            const isSelected = answered && selected === ch;
+            const isCorrect = answered && ch === currentQ.a;
             let bg = C.card, bdr = C.bdr;
-            if (selected !== null) {
-              if (isRight) { bg = "rgba(110,203,115,0.15)"; bdr = C.ok; }
-              else if (isThis) { bg = "rgba(232,112,112,0.15)"; bdr = C.ng; }
+            if (answered) {
+              if (isCorrect) { bg = "rgba(110,203,115,0.15)"; bdr = C.ok; }
+              else if (isSelected) { bg = "rgba(232,112,112,0.15)"; bdr = C.ng; }
             }
             return (
-              <button key={i} disabled={selected !== null}
-                className={"choice-btn " + (selected !== null && isThis ? (isRight ? "pulse" : "shake") : "")}
+              <button key={ch} disabled={answered}
+                className={"choice-btn " + (isSelected ? (isCorrect ? "pulse" : "shake") : "")}
                 onClick={() => handleSelect(ch)}
                 style={{...baseBtn,background:bg,border:"1.5px solid "+bdr,padding:"14px 16px",fontSize:15,color:C.cream,textAlign:"left",width:"100%"}}>
                 {ch}
