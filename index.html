@@ -990,50 +990,69 @@ const ACH = [
 // Each question has difficulty 1-6 (maps to A1-C2)
 
 const DIAG_VOCAB = [
-  // Level 1 (A1)
+  // Level 1 (A1) - 3 questions
   { q:"\"meeting\" の意味は？", a:"会議", wrong:["会計","契約","締切"], lv:1 },
   { q:"\"email\" の意味は？", a:"電子メール", wrong:["電話","書類","名刺"], lv:1 },
-  // Level 2 (A2)
+  { q:"\"schedule\" の意味は？", a:"予定", wrong:["場所","費用","書類"], lv:1 },
+  // Level 2 (A2) - 3 questions
   { q:"\"deadline\" の意味は？", a:"締切", wrong:["取引先","予算","議題"], lv:2 },
   { q:"\"budget\" の意味は？", a:"予算", wrong:["契約","報告","承認"], lv:2 },
-  // Level 3 (B1)
+  { q:"\"confirm\" の意味は？", a:"確認する", wrong:["拒否する","延長する","変更する"], lv:2 },
+  // Level 3 (B1) - 3 questions
   { q:"\"align\" の意味は？", a:"認識を合わせる", wrong:["反対する","延期する","報告する"], lv:3 },
   { q:"\"prioritize\" の意味は？", a:"優先する", wrong:["却下する","延期する","記録する"], lv:3 },
-  // Level 4 (B2)
+  { q:"\"escalate\" の意味は？", a:"上位に引き上げる", wrong:["縮小する","中断する","復旧する"], lv:3 },
+  // Level 4 (B2) - 3 questions
   { q:"\"bottleneck\" の意味は？", a:"ボトルネック・律速", wrong:["突破口","転換点","出発点"], lv:4 },
   { q:"\"de-risk\" の意味は？", a:"リスクを下げる", wrong:["危険を冒す","投資する","撤退する"], lv:4 },
-  // Level 5 (C1)
+  { q:"\"trade-off\" の意味は？", a:"取捨選択", wrong:["完全一致","相互依存","強制終了"], lv:4 },
+  // Level 5 (C1) - 3 questions
   { q:"\"table-stakes\" の意味は？", a:"参入の最低条件", wrong:["最終目標","追加報酬","交渉材料"], lv:5 },
   { q:"\"scope creep\" の意味は？", a:"範囲が際限なく膨らむ", wrong:["予算超過","人員不足","品質低下"], lv:5 },
-  // Level 6 (C2)
+  { q:"\"north star\" の意味は？", a:"最上位の指標", wrong:["短期目標","副次指標","参考数値"], lv:5 },
+  // Level 6 (C2) - 3 questions
   { q:"\"sunk cost fallacy\" の意味は？", a:"埋没費用の誤謬", wrong:["機会費用","限界費用","固定費用"], lv:6 },
   { q:"\"force majeure\" の意味は？", a:"不可抗力", wrong:["強制執行","最終判断","優先権"], lv:6 },
+  { q:"\"indemnify\" の意味は？", a:"補償する", wrong:["告発する","拘束する","仲裁する"], lv:6 },
 ];
 
 const DIAG_BIZ = [
-  // Level 1-2 (A1-A2)
-  { q:"同僚に資料送付を依頼する最も適切な表現は？", a:"Could you send me the file?", wrong:["Send me the file.","Give me that file now.","I want the file."], lv:2 },
-  // Level 3 (B1)
-  { q:"会議で議題を戻す丁寧な表現は？", a:"Let's circle back to the main topic.", wrong:["Stop talking about that.","That's not important.","You're wasting time."], lv:3 },
-  // Level 4 (B2)
-  { q:"提案に反対するとき最も適切な表現は？", a:"I see your point, but let me offer another perspective.", wrong:["That's wrong.","I disagree completely.","That won't work at all."], lv:4 },
-  // Level 5 (C1)
-  { q:"クライアントへの値上げを伝える最も適切な表現は？", a:"We're proposing a modest adjustment to reflect our enhanced value proposition.", wrong:["We're raising prices.","You need to pay more now.","The price goes up."], lv:5 },
-  // Level 6 (C2)
-  { q:"契約非更新を伝える最も慎重な表現は？", a:"After careful consideration, we've decided to part ways, and we'll ensure a smooth transition.", wrong:["We're firing you.","Your contract is cancelled.","We don't want to work with you anymore."], lv:6 },
+  // Level 1-2 (A1-A2) - similar length, natural alternatives
+  { q:"同僚に資料送付を依頼する最も適切な表現は？", a:"Could you send me the file?", wrong:["Can you give me that file?","Would you get me that file?","Will you hand me the file?"], lv:2 },
+  { q:"会議の日程を確認する適切な表現は？", a:"Just to confirm, is Friday okay?", wrong:["Friday is the day, right?","We meet on Friday, correct?","Friday works for you, yes?"], lv:2 },
+  { q:"同僚に感謝を伝える自然な表現は？", a:"Thanks, I appreciate it.", wrong:["Thank you very kindly.","I'm grateful to you much.","Thanks for doing that thing."], lv:1 },
+  // Level 3 (B1) - similar complexity, subtle differences
+  { q:"会議で議題を戻す丁寧な表現は？", a:"Let's circle back to the main topic.", wrong:["Let's return back to that point.","Can we go to the first topic?","We should discuss that again."], lv:3 },
+  { q:"相手の意見に同意を示す適切な表現は？", a:"That makes sense, I'm on board.", wrong:["I think so too about that.","I'm agreeable with your view.","Your point sounds reasonable to me."], lv:3 },
+  { q:"進捗を報告する際の適切な表現は？", a:"Just giving you a heads up.", wrong:["I am informing you now.","Let me tell you something.","Here is the information for you."], lv:3 },
+  // Level 4 (B2) - professional nuances
+  { q:"提案に反対するとき最も適切な表現は？", a:"I see your point, but let me offer another perspective.", wrong:["That's an interesting idea, though I have some concerns.", "I understand, but I think we should consider alternatives.", "Your suggestion is noted, but I'd like to propose something."], lv:4 },
+  { q:"フィードバックを求める適切な表現は？", a:"I'd appreciate your input on this.", wrong:["Please give me your feedback here.","I would like your comments about it.","Could you share your thoughts on this?"], lv:4 },
+  { q:"ミスを謝罪する適切な表現は？", a:"That's on me, I should have caught it.", wrong:["I apologize for the error I made.","Sorry about that mistake I did.","I take responsibility for this issue."], lv:4 },
+  // Level 5 (C1) - nuanced professional language
+  { q:"クライアントへの値上げを伝える最も適切な表現は？", a:"We're proposing a modest adjustment to reflect our enhanced value.", wrong:["We'd like to revise our pricing to better align with market rates.","We're implementing a small increase based on our improved services.","We need to adjust our fees to match our expanded offerings."], lv:5 },
+  { q:"厳しいフィードバックを伝える適切な表現は？", a:"I need to be direct with you about some areas for improvement.", wrong:["I want to share some constructive criticism with you today.","There are several points we should discuss about your work.","I have some honest feedback to share regarding your performance."], lv:5 },
+  // Level 6 (C2) - highly nuanced diplomatic language
+  { q:"契約非更新を伝える最も慎重な表現は？", a:"After careful consideration, we've decided to part ways amicably.", wrong:["We've concluded that ending our partnership would be best for both.","Following a thorough review, we believe it's time to move forward.","Upon reflection, we feel this arrangement has run its course."], lv:6 },
+  { q:"難しい交渉で妥協点を探る適切な表現は？", a:"I believe there's room for us to find common ground here.", wrong:["Perhaps we could explore some middle territory on this matter.","I think we can work together to find a solution that works.","There might be an opportunity to bridge our differences."], lv:6 },
 ];
 
 const DIAG_GRAMMAR = [
-  // Level 2 (A2)
+  // Level 2 (A2) - 2 questions
   { q:"正しい文を選んでください:", a:"She has been working here for five years.", wrong:["She is working here since five years.","She works here from five years.","She has been work here for five years."], lv:2 },
-  // Level 3 (B1)
+  { q:"空欄に入る適切なものは？ \"I ___ to the meeting yesterday.\"", a:"went", wrong:["have gone","was going","had went"], lv:2 },
+  // Level 3 (B1) - 2 questions
   { q:"空欄に入る最も適切なものは？ \"If I ___ earlier, I would have caught the train.\"", a:"had left", wrong:["left","would leave","have left"], lv:3 },
-  // Level 4 (B2)
+  { q:"空欄に入る適切なものは？ \"By the time you arrive, I ___ the report.\"", a:"will have finished", wrong:["will finish","have finished","finished"], lv:3 },
+  // Level 4 (B2) - 2 questions
   { q:"正しい文を選んでください:", a:"The report, which was submitted yesterday, needs revision.", wrong:["The report which was submitted yesterday, needs revision.","The report, which was submitted yesterday needs revision.","The report which, was submitted yesterday, needs revision."], lv:4 },
-  // Level 5 (C1)
+  { q:"空欄に入る適切なものは？ \"The manager insisted that he ___ present.\"", a:"be", wrong:["is","was","would be"], lv:4 },
+  // Level 5 (C1) - 2 questions
   { q:"空欄に入る最も適切なものは？ \"Not only ___ the deadline, but she also exceeded expectations.\"", a:"did she meet", wrong:["she met","she did meet","met she"], lv:5 },
-  // Level 6 (C2)
+  { q:"空欄に入る適切なものは？ \"Had I known about the issue, I ___ it sooner.\"", a:"would have addressed", wrong:["would address","have addressed","addressed"], lv:5 },
+  // Level 6 (C2) - 2 questions
   { q:"文法的に正しく、かつ最もフォーマルな表現は？", a:"Were the board to approve, we would proceed immediately.", wrong:["If the board would approve, we proceed immediately.","Should the board approves, we will proceed immediately.","If the board will approve, we would proceed immediately."], lv:6 },
+  { q:"空欄に入る最もフォーマルな表現は？ \"___, the proposal would merit further consideration.\"", a:"Were the circumstances different", wrong:["If the circumstances are different","Should circumstances be different","When circumstances differ"], lv:6 },
 ];
 
 const DIAG_WRITE = [
@@ -1810,6 +1829,8 @@ function DiagnosticTest({ onComplete, onSkip }) {
 
   // Cache questions and choices per step to avoid re-generation/re-shuffle on re-render
   const questionsCache = useRef({});
+  // Track used questions globally to prevent duplicates across all steps
+  const usedQuestionsRef = useRef(new Set());
 
   // Generate question for a given step (cached in ref to avoid re-shuffling)
   const getQuestionForStep = (stepNum, answersArr, level) => {
@@ -1822,24 +1843,32 @@ function DiagnosticTest({ onComplete, onSkip }) {
       return { q: null, choices: [] };
     }
 
+    const usedQuestions = usedQuestionsRef.current;
+
+    // Select an unused question, expanding level range if needed
+    const selectUnused = (pool, part) => {
+      // First filter out already used questions
+      const unused = pool.filter(x => !usedQuestions.has(x.q));
+      // Prefer questions at target level, then expand range
+      let candidates = unused.filter(x => x.lv === level);
+      if (candidates.length === 0) candidates = unused.filter(x => Math.abs(x.lv - level) <= 1);
+      if (candidates.length === 0) candidates = unused.filter(x => Math.abs(x.lv - level) <= 2);
+      if (candidates.length === 0) candidates = unused; // any unused
+      if (candidates.length === 0) candidates = pool; // last resort: allow repeat
+      // Shuffle and pick first to add randomness
+      const picked = shuffle(candidates)[0];
+      if (picked) usedQuestions.add(picked.q);
+      return { part, ...picked };
+    };
+
     let q;
     if (stepNum <= 5) {
-      // Part 1: Vocabulary
-      const pool = DIAG_VOCAB.filter(x => Math.abs(x.lv - level) <= 1);
-      const unused = pool.filter(x => !answersArr.find(a => a.q === x.q));
-      q = { part:1, ...(unused[0] || pool[0]) };
+      q = selectUnused(DIAG_VOCAB, 1);
     } else if (stepNum <= 9) {
-      // Part 2: Business expressions
-      const pool = DIAG_BIZ.filter(x => Math.abs(x.lv - level) <= 1);
-      const unused = pool.filter(x => !answersArr.find(a => a.q === x.q));
-      q = { part:2, ...(unused[0] || pool[0]) };
+      q = selectUnused(DIAG_BIZ, 2);
     } else if (stepNum <= 12) {
-      // Part 3: Grammar
-      const pool = DIAG_GRAMMAR.filter(x => Math.abs(x.lv - level) <= 1);
-      const unused = pool.filter(x => !answersArr.find(a => a.q === x.q));
-      q = { part:3, ...(unused[0] || pool[0]) };
+      q = selectUnused(DIAG_GRAMMAR, 3);
     } else {
-      // Part 4: Production (writing)
       q = { part:4, ...DIAG_WRITE[0] };
     }
 
